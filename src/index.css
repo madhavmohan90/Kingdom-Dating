@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-kingdom-darker text-white antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cinzel', serif;
+  }
+}
+
+@layer components {
+  .btn-gold {
+    @apply bg-gradient-gold text-kingdom-darker font-semibold py-3 px-6 rounded-xl
+           hover:opacity-90 transition-opacity duration-200 text-center;
+  }
+
+  .btn-outline {
+    @apply border border-kingdom-gold text-kingdom-gold font-semibold py-3 px-6 rounded-xl
+           hover:bg-kingdom-gold/10 transition-colors duration-200 text-center;
+  }
+
+  .card-dark {
+    @apply bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6;
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 20px rgba(212, 168, 67, 0.3);
+  }
+}
+
+/* Audio waveform animation */
+@keyframes waveform {
+  0%, 100% { height: 4px; }
+  50% { height: 20px; }
+}
+
+.waveform-bar {
+  animation: waveform 1s ease-in-out infinite;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}

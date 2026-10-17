@@ -1,0 +1,129 @@
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+
+const archetypes = {
+  protector: {
+    name: "The Protector",
+    emoji: "🛡️",
+    title: "Guardian of the Realm",
+    description: "You are the shield others lean on. Steady, reliable, and fiercely loyal — your strength isn't in fighting, it's in standing firm when everyone else runs.",
+    trait: "Loyal • Strong • Dependable",
+    color: "from-blue-900/40 to-kingdom-darker",
+  },
+  genius: {
+    name: "The Genius",
+    emoji: "🧠",
+    title: "Keeper of Forbidden Knowledge",
+    description: "Your mind is your weapon. You see patterns others miss, solve what others can't, and your curiosity makes you endlessly fascinating.",
+    trait: "Brilliant • Curious • Strategic",
+    color: "from-purple-900/40 to-kingdom-darker",
+  },
+  rebel: {
+    name: "The Rebel",
+    emoji: "⚡",
+    title: "Breaker of Chains",
+    description: "Rules bore you. Convention suffocates you. You live by your own code and inspire others to question everything they've been told.",
+    trait: "Bold • Fearless • Authentic",
+    color: "from-red-900/40 to-kingdom-darker",
+  },
+  romantic: {
+    name: "The Romantic",
+    emoji: "🌹",
+    title: "Voice of the Heart",
+    description: "You feel everything deeply. Your words carry weight, your presence feels like a poem, and you believe love is the only quest worth taking.",
+    trait: "Passionate • Expressive • Deep",
+    color: "from-pink-900/40 to-kingdom-darker",
+  },
+  commander: {
+    name: "The Commander",
+    emoji: "👑",
+    title: "Ruler of Destiny",
+    description: "You were born to lead. Not through force, but through vision — people follow you because you see the path when others see only fog.",
+    trait: "Decisive • Charismatic • Visionary",
+    color: "from-amber-900/40 to-kingdom-darker",
+  },
+  adventurer: {
+    name: "The Adventurer",
+    emoji: "🗺️",
+    title: "Walker Between Worlds",
+    description: "Life is too short for routine. You chase sunsets, dive into the unknown, and every conversation with you feels like the beginning of a story.",
+    trait: "Spontaneous • Energetic • Free",
+    color: "from-emerald-900/40 to-kingdom-darker",
+  },
+  healer: {
+    name: "The Healer",
+    emoji: "✨",
+    title: "Mender of Souls",
+    description: "You carry a quiet power — the ability to make anyone feel seen. Your empathy isn't weakness, it's the rarest kind of strength.",
+    trait: "Empathetic • Calm • Wise",
+    color: "from-teal-900/40 to-kingdom-darker",
+  },
+  wildcard: {
+    name: "The Wildcard",
+    emoji: "🃏",
+    title: "Trickster of the Court",
+    description: "No one can predict you — and that's exactly your power. You keep people guessing, laughing, and utterly captivated.",
+    trait: "Unpredictable • Witty • Magnetic",
+    color: "from-orange-900/40 to-kingdom-darker",
+  },
+}
+
+export default function ArchetypeReveal() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [revealed, setRevealed] = useState(false)
+
+  const archetypeKey = location.state?.archetype || 'protector'
+  const archetype = archetypes[archetypeKey]
+
+  useEffect(() => {
+    // Dramatic reveal delay
+    const timer = setTimeout(() => setRevealed(true), 800)
+    return () => clearTimeout(timer)
+  }, [])
+
+  return (
+    <div className={`min-h-screen bg-gradient-to-b ${archetype.color} flex flex-col items-center justify-center px-6 text-center`}>
+      {/* Glow effect */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-80 h-80 bg-kingdom-gold/10 rounded-full blur-[100px] pointer-events-none" />
+
+      <div className={`relative z-10 max-w-md transition-all duration-1000 ${revealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        {/* Archetype emoji */}
+        <div className="text-7xl mb-6">{archetype.emoji}</div>
+
+        {/* Result label */}
+        <p className="text-kingdom-gold/60 text-sm tracking-[0.3em] uppercase mb-3">
+          You are
+        </p>
+
+        {/* Archetype name */}
+        <h1 className="font-display text-4xl md:text-5xl font-bold text-kingdom-gold mb-2">
+          {archetype.name}
+        </h1>
+
+        {/* Title */}
+        <p className="text-white/50 text-sm italic mb-8">
+          {archetype.title}
+        </p>
+
+        {/* Description */}
+        <p className="text-white/70 text-base leading-relaxed mb-6">
+          {archetype.description}
+        </p>
+
+        {/* Traits */}
+        <p className="text-kingdom-gold/80 text-sm tracking-wider mb-12">
+          {archetype.trait}
+        </p>
+
+        {/* CTA */}
+        <button
+          onClick={() => navigate('/world-select')}
+          className="btn-gold w-full text-lg glow-gold"
+        >
+          Choose Your World
+        </button>
+      </div>
+    </div>
+  )
+}
