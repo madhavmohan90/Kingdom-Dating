@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { worldMeta } from '../data/prompts'
+import AmbientBackground from '../components/AmbientBackground'
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -29,7 +30,6 @@ export default function Profile() {
 
       setProfile(data)
 
-      // Load user's recordings
       const { data: recs } = await supabase
         .from('voice_recordings')
         .select('*')
@@ -91,46 +91,52 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-kingdom flex items-center justify-center pb-20">
-        <div className="text-kingdom-gold animate-pulse">Loading...</div>
+      <div className="min-h-screen bg-gradient-kingdom flex items-center justify-center pb-20 relative overflow-hidden">
+        <AmbientBackground world="kingdom" />
+        <div className="text-kingdom-gold animate-pulse relative z-10">Loading...</div>
       </div>
     )
   }
 
   const archetype = getArchetypeDisplay(profile?.archetype)
+  const world = profile?.selected_world || 'kingdom'
+  const wMeta = worldMeta[world] || worldMeta.kingdom
 
   return (
-    <div className="min-h-screen bg-gradient-kingdom px-6 pt-12 pb-24">
-      <div className="max-w-md mx-auto">
-        <h1 className="font-display text-2xl text-kingdom-gold mb-8">
-          Your Profile
-        </h1>
+    <div className="min-h-screen bg-gradient-kingdom px-6 pt-12 pb-24 relative overflow-hidden">
+      <AmbientBackground world={world} />
+
+      <div className="max-w-md mx-auto relative z-10">
+        {/* Header with ornament */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="font-display text-2xl text-shimmer">Your Profile</h1>
+          <span className="text-kingdom-gold/20 text-xs tracking-[0.3em]">✦</span>
+        </div>
 
         {/* Archetype card */}
-        <div className="card-dark text-center mb-6">
-          <div className="text-5xl mb-3">{archetype.emoji}</div>
-          <h2 className="font-display text-xl text-kingdom-gold mb-1">
+        <div className="card-ornate text-center mb-6">
+          <div className="text-5xl mb-3 animate-float-slow">{archetype.emoji}</div>
+          <h2 className="font-display text-xl text-shimmer mb-1">
             {archetype.name}
           </h2>
           <p className="text-white/40 text-sm italic mb-4">
             {archetype.title}
           </p>
-          <div className="border-t border-white/10 pt-4 mt-4">
-            <p className="text-white font-medium">{profile?.name}</p>
-            <p className="text-white/40 text-sm">{profile?.age} years old</p>
-            {profile?.selected_world && (
-              <p className="text-white/30 text-xs mt-1">
-                {(worldMeta[profile.selected_world] || worldMeta.kingdom).emoji}{' '}
-                {(worldMeta[profile.selected_world] || worldMeta.kingdom).name}
-              </p>
-            )}
-          </div>
+          <div className="divider-ornate mb-4">✦</div>
+          <p className="text-white font-medium">{profile?.name}</p>
+          <p className="text-white/40 text-sm">{profile?.age} years old</p>
+          {profile?.selected_world && (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-kingdom-gold/5 border border-kingdom-gold/15">
+              <span className="text-sm">{wMeta.emoji}</span>
+              <span className="text-kingdom-gold/60 text-xs font-display">{wMeta.name}</span>
+            </div>
+          )}
         </div>
 
         {/* Voice recordings */}
-        <div className="card-dark mb-6">
-          <h3 className="text-white/60 text-sm font-medium mb-4">
-            Your Voice Recordings ({recordings.length})
+        <div className="card-ornate mb-6">
+          <h3 className="text-kingdom-gold/50 text-sm font-display tracking-wide mb-4">
+            Voice Recordings ({recordings.length})
           </h3>
 
           {recordings.length > 0 && (
@@ -139,14 +145,14 @@ export default function Profile() {
                 <button
                   key={rec.id}
                   onClick={() => playRecording(rec)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left ${
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${
                     playingId === rec.id
-                      ? 'bg-kingdom-gold/15 border border-kingdom-gold/30'
-                      : 'bg-white/5 border border-white/5 hover:bg-white/8'
+                      ? 'bg-kingdom-gold/10 border border-kingdom-gold/25'
+                      : 'bg-white/3 border border-white/5 hover:bg-white/5 hover:border-kingdom-gold/10'
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    playingId === rec.id ? 'bg-kingdom-gold' : 'bg-white/10'
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                    playingId === rec.id ? 'bg-gradient-gold pulse-ring' : 'bg-white/10'
                   }`}>
                     {playingId === rec.id ? (
                       <svg className="w-3.5 h-3.5 text-kingdom-darker" fill="currentColor" viewBox="0 0 24 24">
@@ -171,44 +177,37 @@ export default function Profile() {
 
           <button
             onClick={() => navigate('/voice-record')}
-            className="w-full py-3 rounded-xl border border-dashed border-white/20 text-white/40 text-sm hover:border-kingdom-gold/30 hover:text-kingdom-gold/60 transition-colors"
+            className="w-full py-3 rounded-xl border border-dashed border-kingdom-gold/15 text-kingdom-gold/40 text-sm hover:border-kingdom-gold/30 hover:text-kingdom-gold/60 transition-all"
           >
             + Record a new quest response
           </button>
         </div>
 
         {/* Settings */}
-        <div className="card-dark mb-6">
-          <h3 className="text-white/60 text-sm font-medium mb-4">Settings</h3>
-          <div className="space-y-3">
-            <button
-              onClick={() => navigate('/edit-profile')}
-              className="w-full flex items-center justify-between py-2 text-white/60 hover:text-white/80 text-sm"
-            >
-              <span>Edit Profile</span>
-              <span>→</span>
-            </button>
-            <button
-              onClick={() => navigate('/world-select')}
-              className="w-full flex items-center justify-between py-2 text-white/60 hover:text-white/80 text-sm"
-            >
-              <span>Change World</span>
-              <span>→</span>
-            </button>
-            <button
-              onClick={() => navigate('/quiz')}
-              className="w-full flex items-center justify-between py-2 text-white/60 hover:text-white/80 text-sm"
-            >
-              <span>Retake Quiz</span>
-              <span>→</span>
-            </button>
+        <div className="card-ornate mb-6">
+          <h3 className="text-kingdom-gold/50 text-sm font-display tracking-wide mb-4">Settings</h3>
+          <div className="space-y-1">
+            {[
+              { label: 'Edit Profile', path: '/edit-profile' },
+              { label: 'Change World', path: '/world-select' },
+              { label: 'Retake Quiz', path: '/quiz' },
+            ].map(item => (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className="w-full flex items-center justify-between py-3 px-1 text-white/50 hover:text-kingdom-gold/70 text-sm transition-colors border-b border-white/5 last:border-0"
+              >
+                <span>{item.label}</span>
+                <span className="text-kingdom-gold/30">→</span>
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Logout */}
         <button
           onClick={handleLogout}
-          className="w-full text-center text-red-400/60 text-sm hover:text-red-400 transition-colors py-3"
+          className="w-full text-center text-red-400/40 text-sm hover:text-red-400/70 transition-colors py-3"
         >
           Leave the Kingdom
         </button>

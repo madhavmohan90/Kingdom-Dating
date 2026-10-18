@@ -118,7 +118,7 @@ export const worldMeta = {
     tagline: 'Where stars align for two souls',
     gradient: 'from-indigo-900/40 via-blue-900/20 to-kingdom-darker',
     accentColor: 'blue-400',
-    bgClass: 'bg-gradient-to-b from-indigo-950 via-slate-900 to-kingdom-darker',
+    bgClass: 'bg-gradient-cosmos',
   },
   shadows: {
     name: 'The Shadows',
@@ -126,6 +126,6 @@ export const worldMeta = {
     tagline: 'Where mystery speaks louder than light',
     gradient: 'from-emerald-900/30 via-slate-900/20 to-kingdom-darker',
     accentColor: 'emerald-400',
-    bgClass: 'bg-gradient-to-b from-slate-900 via-gray-900 to-kingdom-darker',
+    bgClass: 'bg-gradient-shadows',
   },
 }

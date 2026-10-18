@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import AmbientBackground from '../components/AmbientBackground'
 
 const archetypes = {
   protector: {
@@ -77,51 +78,65 @@ export default function ArchetypeReveal() {
   const archetype = archetypes[archetypeKey]
 
   useEffect(() => {
-    // Dramatic reveal delay
     const timer = setTimeout(() => setRevealed(true), 800)
     return () => clearTimeout(timer)
   }, [])
 
   return (
-    <div className={`min-h-screen bg-gradient-to-b ${archetype.color} flex flex-col items-center justify-center px-6 text-center`}>
-      {/* Glow effect */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-80 h-80 bg-kingdom-gold/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className={`min-h-screen bg-gradient-to-b ${archetype.color} flex flex-col items-center justify-center px-6 text-center relative overflow-hidden`}>
+      <AmbientBackground world="kingdom" />
+
+      {/* Central glow */}
+      <div
+        className="absolute top-1/3 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full pointer-events-none animate-glow-pulse"
+        style={{
+          background: 'radial-gradient(circle, rgba(212,168,67,0.15) 0%, transparent 70%)',
+          filter: 'blur(40px)',
+        }}
+      />
 
       <div className={`relative z-10 max-w-md transition-all duration-1000 ${revealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         {/* Archetype emoji */}
-        <div className="text-7xl mb-6">{archetype.emoji}</div>
+        <div className="text-7xl mb-6 animate-float-slow">{archetype.emoji}</div>
 
-        {/* Result label */}
-        <p className="text-kingdom-gold/60 text-sm tracking-[0.3em] uppercase mb-3">
-          You are
-        </p>
+        {/* Ornamental divider */}
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <div className="w-8 h-px bg-gradient-to-r from-transparent to-kingdom-gold/30" />
+          <p className="text-kingdom-gold/50 text-xs tracking-[0.3em] uppercase font-display">
+            You are
+          </p>
+          <div className="w-8 h-px bg-gradient-to-l from-transparent to-kingdom-gold/30" />
+        </div>
 
         {/* Archetype name */}
-        <h1 className="font-display text-4xl md:text-5xl font-bold text-kingdom-gold mb-2">
+        <h1 className="font-display text-4xl md:text-5xl font-bold text-shimmer mb-2">
           {archetype.name}
         </h1>
 
         {/* Title */}
-        <p className="text-white/50 text-sm italic mb-8">
+        <p className="text-white/40 text-sm italic mb-8 font-display">
           {archetype.title}
         </p>
 
         {/* Description */}
-        <p className="text-white/70 text-base leading-relaxed mb-6">
-          {archetype.description}
-        </p>
+        <div className="card-ornate text-left mb-6">
+          <p className="text-white/60 text-base leading-relaxed">
+            {archetype.description}
+          </p>
+        </div>
 
         {/* Traits */}
-        <p className="text-kingdom-gold/80 text-sm tracking-wider mb-12">
+        <p className="text-kingdom-gold/60 text-sm tracking-[0.15em] mb-10 font-display">
           {archetype.trait}
         </p>
 
         {/* CTA */}
         <button
           onClick={() => navigate('/world-select')}
-          className="btn-gold w-full text-lg glow-gold"
+          className="btn-gold w-full text-lg glow-gold relative overflow-hidden group"
         >
-          Choose Your World
+          <span className="relative z-10">Choose Your World</span>
+          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         </button>
       </div>
     </div>

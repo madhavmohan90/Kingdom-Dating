@@ -16,21 +16,123 @@
 @layer components {
   .btn-gold {
     @apply bg-gradient-gold text-kingdom-darker font-semibold py-3 px-6 rounded-xl
-           hover:opacity-90 transition-opacity duration-200 text-center;
+           hover:opacity-90 transition-all duration-200 text-center;
+    box-shadow: 0 0 20px rgba(212, 168, 67, 0.2), inset 0 1px 0 rgba(255,255,255,0.2);
   }
 
   .btn-outline {
-    @apply border border-kingdom-gold text-kingdom-gold font-semibold py-3 px-6 rounded-xl
+    @apply border border-kingdom-gold/50 text-kingdom-gold font-semibold py-3 px-6 rounded-xl
            hover:bg-kingdom-gold/10 transition-colors duration-200 text-center;
   }
 
   .card-dark {
-    @apply bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6;
+    @apply backdrop-blur-sm rounded-2xl p-6;
+    background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+    border: 1px solid rgba(212, 168, 67, 0.08);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .card-ornate {
+    @apply backdrop-blur-sm rounded-2xl p-6 relative overflow-hidden;
+    background: linear-gradient(145deg, rgba(212,168,67,0.06) 0%, rgba(45,27,105,0.15) 50%, rgba(212,168,67,0.03) 100%);
+    border: 1px solid rgba(212, 168, 67, 0.15);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 60px rgba(212,168,67,0.05), inset 0 1px 0 rgba(212,168,67,0.1);
+  }
+
+  .card-ornate::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(212,168,67,0.4) 50%, transparent 100%);
+  }
+
+  .card-ornate::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(212,168,67,0.2) 50%, transparent 100%);
   }
 
   .glow-gold {
-    box-shadow: 0 0 20px rgba(212, 168, 67, 0.3);
+    box-shadow: 0 0 30px rgba(212, 168, 67, 0.3), 0 0 60px rgba(212, 168, 67, 0.1);
   }
+
+  /* Ornamental divider */
+  .divider-ornate {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: rgba(212, 168, 67, 0.3);
+    font-size: 10px;
+  }
+  .divider-ornate::before,
+  .divider-ornate::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212, 168, 67, 0.2), transparent);
+  }
+}
+
+/* Ambient mist / fog effect */
+.ambient-mist {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.ambient-mist::before {
+  content: '';
+  position: absolute;
+  width: 600px; height: 600px;
+  top: -200px; left: -100px;
+  background: radial-gradient(circle, rgba(45,27,105,0.15) 0%, transparent 70%);
+  animation: drift 20s ease-in-out infinite;
+}
+
+.ambient-mist::after {
+  content: '';
+  position: absolute;
+  width: 500px; height: 500px;
+  bottom: -200px; right: -100px;
+  background: radial-gradient(circle, rgba(139,26,61,0.08) 0%, transparent 70%);
+  animation: drift 25s ease-in-out infinite reverse;
+}
+
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(40px, 20px) scale(1.1); }
+  50% { transform: translate(-20px, 40px) scale(0.95); }
+  75% { transform: translate(30px, -20px) scale(1.05); }
+}
+
+/* Floating particles */
+.particles {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: rgba(212, 168, 67, 0.4);
+  border-radius: 50%;
+  animation: float-up linear infinite;
+}
+
+@keyframes float-up {
+  0% { transform: translateY(100vh) scale(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-10vh) scale(1); opacity: 0; }
 }
 
 /* Audio waveform animation */
@@ -51,4 +153,34 @@
 
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Shimmer text effect for titles */
+.text-shimmer {
+  background: linear-gradient(120deg, #D4A843 0%, #F0D78C 25%, #D4A843 50%, #CD7F32 75%, #D4A843 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Pulse ring for recording */
+.pulse-ring {
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(212, 168, 67, 0.4); }
+  100% { box-shadow: 0 0 0 20px rgba(212, 168, 67, 0); }
+}
+
+/* Scroll fade for bottom nav area */
+.fade-bottom {
+  mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
 }

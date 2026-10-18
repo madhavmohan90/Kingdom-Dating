@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import MatchCelebration from '../components/MatchCelebration'
+import AmbientBackground from '../components/AmbientBackground'
 import { worldMeta } from '../data/prompts'
 
 export default function Discover() {
@@ -42,7 +43,6 @@ export default function Discover() {
       setMyWorld(myProfile.selected_world || 'kingdom')
       const oppositeGender = myProfile.gender === 'female' ? 'male' : 'female'
 
-      // Get profiles user hasn't liked/skipped yet
       const { data: existingLikes } = await supabase
         .from('likes')
         .select('liked_id')
@@ -67,7 +67,6 @@ export default function Discover() {
 
       const { data } = await query
 
-      // Only show profiles that have at least one voice recording
       const withRecordings = (data || []).filter(
         p => p.voice_recordings && p.voice_recordings.length > 0
       )
@@ -84,7 +83,6 @@ export default function Discover() {
 
   const playAudio = async (storagePath) => {
     try {
-      // Stop current audio
       if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current = null
@@ -96,23 +94,17 @@ export default function Discover() {
 
       setAudioLoading(true)
 
-      // Get signed URL from Supabase Storage
       const { data, error } = await supabase.storage
         .from('voice-recordings')
-        .createSignedUrl(storagePath, 300) // 5 min expiry
+        .createSignedUrl(storagePath, 300)
 
       if (error) throw error
 
       const audio = new Audio(data.signedUrl)
       audioRef.current = audio
 
-      audio.onended = () => {
-        setIsPlaying(false)
-      }
-
-      audio.oncanplay = () => {
-        setAudioLoading(false)
-      }
+      audio.onended = () => setIsPlaying(false)
+      audio.oncanplay = () => setAudioLoading(false)
 
       await audio.play()
       setIsPlaying(true)
@@ -125,7 +117,6 @@ export default function Discover() {
   const handleLike = async () => {
     if (!currentProfile) return
 
-    // Stop any playing audio
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current = null
@@ -139,7 +130,6 @@ export default function Discover() {
         liked_id: currentProfile.id,
       })
 
-      // Check if a match was created (mutual like triggers auto-match)
       const { data: match } = await supabase
         .from('matches')
         .select('id')
@@ -147,11 +137,8 @@ export default function Discover() {
         .maybeSingle()
 
       if (match) {
-        setMatchData({
-          matchId: match.id,
-          otherUser: currentProfile,
-        })
-        return // Don't advance yet — celebration screen will handle it
+        setMatchData({ matchId: match.id, otherUser: currentProfile })
+        return
       }
     }
 
@@ -172,7 +159,7 @@ export default function Discover() {
       setCurrentIndex(prev => prev + 1)
       setIsPlaying(false)
     } else {
-      setCurrentIndex(profiles.length) // triggers "no more" state
+      setCurrentIndex(profiles.length)
     }
   }
 
@@ -190,7 +177,6 @@ export default function Discover() {
     return map[archetype] || { emoji: '❓', name: 'Unknown' }
   }
 
-  // Swipe handlers
   const handleTouchStart = useCallback((e) => {
     touchStart.current = e.touches[0].clientX
   }, [])
@@ -204,13 +190,8 @@ export default function Discover() {
 
   const handleTouchEnd = useCallback(() => {
     if (Math.abs(swipeOffset) > 100) {
-      if (swipeOffset > 100) {
-        // Swiped right → Like
-        handleLike()
-      } else {
-        // Swiped left → Skip
-        handleSkip()
-      }
+      if (swipeOffset > 100) handleLike()
+      else handleSkip()
     }
     setSwipeOffset(0)
     setSwiping(false)
@@ -221,8 +202,9 @@ export default function Discover() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen ${meta.bgClass} flex items-center justify-center pb-20`}>
-        <div className="text-kingdom-gold animate-pulse font-display text-xl">
+      <div className={`min-h-screen ${meta.bgClass} flex items-center justify-center pb-20 relative overflow-hidden`}>
+        <AmbientBackground world={myWorld} />
+        <div className="text-kingdom-gold animate-pulse font-display text-xl relative z-10">
           Entering {meta.name}...
         </div>
       </div>
@@ -231,14 +213,18 @@ export default function Discover() {
 
   if (!currentProfile) {
     return (
-      <div className={`min-h-screen ${meta.bgClass} flex flex-col items-center justify-center px-6 pb-20 text-center`}>
-        <div className="text-5xl mb-4">{meta.emoji}</div>
-        <h2 className="font-display text-2xl text-kingdom-gold mb-3">
-          The Realm Awaits
-        </h2>
-        <p className="text-white/50 text-sm max-w-xs">
-          No new voices in your world right now. Check back soon — new quests arrive daily.
-        </p>
+      <div className={`min-h-screen ${meta.bgClass} flex flex-col items-center justify-center px-6 pb-20 text-center relative overflow-hidden`}>
+        <AmbientBackground world={myWorld} />
+        <div className="relative z-10">
+          <div className="text-6xl mb-6 animate-float-slow">{meta.emoji}</div>
+          <h2 className="font-display text-2xl text-shimmer mb-3">
+            The Realm Awaits
+          </h2>
+          <p className="text-white/40 text-sm max-w-xs leading-relaxed">
+            No new voices in your world right now. Check back soon — new quests arrive daily.
+          </p>
+          <div className="divider-ornate mt-8 max-w-[200px] mx-auto">✦</div>
+        </div>
       </div>
     )
   }
@@ -248,20 +234,22 @@ export default function Discover() {
     || currentProfile.voice_recordings?.[0]
 
   return (
-    <div className={`min-h-screen ${meta.bgClass} px-6 pt-12 pb-24`}>
-      <div className="max-w-md mx-auto">
+    <div className={`min-h-screen ${meta.bgClass} px-6 pt-12 pb-24 relative overflow-hidden`}>
+      <AmbientBackground world={myWorld} />
+
+      <div className="max-w-md mx-auto relative z-10">
         {/* World header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <p className="text-white/40 text-xs tracking-wider uppercase">Exploring</p>
-            <h1 className="font-display text-xl text-kingdom-gold">{meta.name}</h1>
+            <p className="text-white/30 text-xs tracking-[0.2em] uppercase">Exploring</p>
+            <h1 className="font-display text-xl text-shimmer">{meta.name}</h1>
           </div>
-          <span className="text-2xl">{meta.emoji}</span>
+          <span className="text-2xl animate-float-slow">{meta.emoji}</span>
         </div>
 
         {/* Voice card — swipeable */}
         <div
-          className="card-dark animate-fade-in"
+          className="card-ornate animate-fade-in"
           key={currentProfile.id}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -273,22 +261,30 @@ export default function Discover() {
           }}
         >
           {/* Archetype badge */}
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-2xl">{archetype.emoji}</span>
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-12 h-12 rounded-full bg-kingdom-gold/10 border border-kingdom-gold/20 flex items-center justify-center">
+              <span className="text-2xl">{archetype.emoji}</span>
+            </div>
             <div>
-              <p className="text-white/80 font-medium text-sm">{archetype.name}</p>
+              <p className="text-kingdom-gold/90 font-display text-sm tracking-wide">{archetype.name}</p>
               <p className="text-white/40 text-xs">{currentProfile.name}, {currentProfile.age}</p>
             </div>
           </div>
 
           {/* Audio player area */}
-          <div className="bg-white/5 rounded-xl p-6 mb-6 flex flex-col items-center">
+          <div className="rounded-xl p-6 mb-6 flex flex-col items-center"
+               style={{
+                 background: 'linear-gradient(145deg, rgba(212,168,67,0.04) 0%, rgba(255,255,255,0.02) 100%)',
+                 border: '1px solid rgba(212,168,67,0.08)',
+               }}>
             {primaryRecording ? (
               <>
                 <button
                   onClick={() => playAudio(primaryRecording.storage_path)}
                   disabled={audioLoading}
-                  className="w-16 h-16 rounded-full bg-kingdom-gold flex items-center justify-center mb-4 hover:scale-105 transition-transform disabled:opacity-50"
+                  className={`w-16 h-16 rounded-full bg-gradient-gold flex items-center justify-center mb-4 transition-all duration-300 disabled:opacity-50 ${
+                    isPlaying ? 'pulse-ring scale-105' : 'hover:scale-105 glow-gold'
+                  }`}
                 >
                   {audioLoading ? (
                     <div className="w-5 h-5 border-2 border-kingdom-darker border-t-transparent rounded-full animate-spin" />
@@ -309,7 +305,7 @@ export default function Discover() {
                     <div
                       key={i}
                       className={`w-1 rounded-full transition-all duration-300 ${
-                        isPlaying ? 'bg-kingdom-gold waveform-bar' : 'bg-white/20'
+                        isPlaying ? 'bg-kingdom-gold waveform-bar' : 'bg-white/15'
                       }`}
                       style={{
                         height: isPlaying ? undefined : `${4 + Math.random() * 20}px`,
@@ -319,14 +315,12 @@ export default function Discover() {
                   ))}
                 </div>
 
-                <p className="text-white/30 text-xs mt-3">
-                  {isPlaying ? 'Playing...' : 'Tap to listen to their quest response'}
+                <p className="text-white/25 text-xs mt-3">
+                  {isPlaying ? '✦ Listening...' : 'Tap to hear their quest response'}
                 </p>
               </>
             ) : (
-              <p className="text-white/30 text-sm py-4">
-                No voice recording yet
-              </p>
+              <p className="text-white/30 text-sm py-4">No voice recording yet</p>
             )}
           </div>
 
@@ -334,7 +328,7 @@ export default function Discover() {
           <div className="flex gap-3">
             <button
               onClick={handleSkip}
-              className="flex-1 py-3 rounded-xl border border-white/10 text-white/50 hover:bg-white/5 transition-colors text-sm font-medium"
+              className="flex-1 py-3 rounded-xl border border-white/10 text-white/40 hover:bg-white/5 hover:border-white/20 transition-all text-sm font-medium"
             >
               Skip
             </button>
@@ -342,23 +336,23 @@ export default function Discover() {
               onClick={handleLike}
               className="flex-1 btn-gold text-sm"
             >
-              Like Voice
+              ♥ Like Voice
             </button>
           </div>
         </div>
 
         {/* Counter + swipe hint */}
-        <p className="text-white/20 text-xs text-center mt-4">
-          {currentIndex + 1} of {profiles.length} voices
-        </p>
-        <p className="text-white/10 text-[10px] text-center mt-1">
-          ← swipe left to skip · swipe right to like →
+        <div className="divider-ornate mt-6 mb-2">
+          <span className="text-white/20 text-xs">{currentIndex + 1} of {profiles.length}</span>
+        </div>
+        <p className="text-white/10 text-[10px] text-center">
+          ← swipe to skip · swipe to like →
         </p>
 
         {/* Swipe indicator overlay */}
         {swiping && Math.abs(swipeOffset) > 50 && (
           <div className="fixed top-1/3 left-0 right-0 flex justify-center pointer-events-none z-40">
-            <div className={`text-4xl font-display px-6 py-3 rounded-2xl ${
+            <div className={`text-4xl font-display px-6 py-3 rounded-2xl backdrop-blur-sm ${
               swipeOffset > 50
                 ? 'bg-kingdom-gold/20 text-kingdom-gold border border-kingdom-gold/40'
                 : 'bg-red-500/20 text-red-400 border border-red-500/40'

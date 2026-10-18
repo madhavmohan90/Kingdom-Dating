@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import AmbientBackground from '../components/AmbientBackground'
 
 export default function EditProfile() {
   const navigate = useNavigate()
@@ -45,11 +46,7 @@ export default function EditProfile() {
 
       const { error } = await supabase
         .from('profiles')
-        .update({
-          name,
-          age: parseInt(age),
-          bio,
-        })
+        .update({ name, age: parseInt(age), bio })
         .eq('id', user.id)
 
       if (error) throw error
@@ -61,73 +58,65 @@ export default function EditProfile() {
     }
   }
 
+  const inputClass = "w-full bg-white/5 border border-kingdom-gold/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:border-kingdom-gold/40 focus:outline-none focus:bg-white/8 transition-all"
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-kingdom flex items-center justify-center">
-        <div className="text-kingdom-gold animate-pulse">Loading...</div>
+      <div className="min-h-screen bg-gradient-kingdom flex items-center justify-center relative overflow-hidden">
+        <AmbientBackground world="kingdom" />
+        <div className="text-kingdom-gold animate-pulse relative z-10">Loading...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-kingdom px-6 pt-12 pb-24">
-      <div className="max-w-md mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-kingdom px-6 pt-12 pb-24 relative overflow-hidden">
+      <AmbientBackground world="kingdom" />
+
+      <div className="max-w-md mx-auto relative z-10">
         <div className="flex items-center gap-4 mb-8">
           <button
             onClick={() => navigate('/me')}
-            className="text-white/40 hover:text-white/60 text-sm"
+            className="text-white/30 hover:text-kingdom-gold/60 text-sm transition-colors"
           >
             ← Back
           </button>
-          <h1 className="font-display text-2xl text-kingdom-gold">
-            Edit Profile
-          </h1>
+          <h1 className="font-display text-2xl text-shimmer">Edit Profile</h1>
         </div>
 
-        <div className="space-y-5">
-          <div>
-            <label className="text-white/60 text-sm mb-1 block">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:border-kingdom-gold/50 focus:outline-none transition-colors"
-            />
-          </div>
+        <div className="card-ornate">
+          <div className="space-y-5">
+            <div>
+              <label className="text-kingdom-gold/40 text-xs uppercase tracking-wider mb-1.5 block font-display">Name</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} className={inputClass} />
+            </div>
 
-          <div>
-            <label className="text-white/60 text-sm mb-1 block">Age</label>
-            <input
-              type="number"
-              value={age}
-              onChange={e => setAge(e.target.value)}
-              min="18"
-              max="65"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:border-kingdom-gold/50 focus:outline-none transition-colors"
-            />
-          </div>
+            <div>
+              <label className="text-kingdom-gold/40 text-xs uppercase tracking-wider mb-1.5 block font-display">Age</label>
+              <input type="number" value={age} onChange={e => setAge(e.target.value)} min="18" max="65" className={inputClass} />
+            </div>
 
-          <div>
-            <label className="text-white/60 text-sm mb-1 block">Bio (optional)</label>
-            <textarea
-              value={bio}
-              onChange={e => setBio(e.target.value)}
-              maxLength={200}
-              rows={3}
-              placeholder="A few words about yourself..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:border-kingdom-gold/50 focus:outline-none transition-colors resize-none"
-            />
-            <p className="text-white/20 text-xs mt-1 text-right">{bio.length}/200</p>
-          </div>
+            <div>
+              <label className="text-kingdom-gold/40 text-xs uppercase tracking-wider mb-1.5 block font-display">Bio (optional)</label>
+              <textarea
+                value={bio}
+                onChange={e => setBio(e.target.value)}
+                maxLength={200}
+                rows={3}
+                placeholder="A few words about yourself..."
+                className={`${inputClass} resize-none`}
+              />
+              <p className="text-white/15 text-xs mt-1 text-right">{bio.length}/200</p>
+            </div>
 
-          <button
-            onClick={handleSave}
-            disabled={saving || !name || !age}
-            className="btn-gold w-full mt-6 disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !name || !age}
+              className="btn-gold w-full mt-2 disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

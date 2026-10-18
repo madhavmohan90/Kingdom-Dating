@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { worldPrompts, worldMeta } from '../data/prompts'
+import AmbientBackground from '../components/AmbientBackground'
 
 export default function VoiceRecord() {
   const navigate = useNavigate()
@@ -16,7 +17,6 @@ export default function VoiceRecord() {
   const mediaRecorder = useRef(null)
   const chunks = useRef([])
 
-  // Load user's selected world
   useEffect(() => {
     const loadWorld = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -57,7 +57,6 @@ export default function VoiceRecord() {
       mediaRecorder.current.start()
       setIsRecording(true)
 
-      // Auto-stop after 60 seconds
       setTimeout(() => {
         if (mediaRecorder.current?.state === 'recording') {
           mediaRecorder.current.stop()
@@ -86,11 +85,9 @@ export default function VoiceRecord() {
     setUploading(true)
 
     try {
-      // Use getSession (cached) first, fall back to getUser (server check)
       const { data: { session } } = await supabase.auth.getSession()
       let user = session?.user
       if (!user) {
-        // Try server check as fallback
         const { data: { user: serverUser }, error: authError } = await supabase.auth.getUser()
         user = serverUser
         if (authError || !user) {
@@ -104,27 +101,17 @@ export default function VoiceRecord() {
         return
       }
 
-      console.log('Uploading for user:', user.id, 'blob size:', audioBlob.size)
-
-      // First, try to list buckets to find the right name
       const { data: buckets, error: bucketError } = await supabase.storage.listBuckets()
-      console.log('Available buckets:', buckets?.map(b => b.name), 'error:', bucketError)
 
-      // Find the right bucket - try exact match first, then fuzzy
       let bucketName = 'voice-recordings'
       if (buckets && buckets.length > 0) {
         const exactMatch = buckets.find(b => b.name === 'voice-recordings')
         if (!exactMatch) {
-          // Look for any bucket with "voice" in the name
           const voiceBucket = buckets.find(b => b.name.toLowerCase().includes('voice'))
           if (voiceBucket) {
-            console.log('Using bucket:', voiceBucket.name, '(exact "voice-recordings" not found)')
             bucketName = voiceBucket.name
           } else {
-            console.log('No voice bucket found! Available:', buckets.map(b => b.name))
-            alert('Storage bucket "voice-recordings" not found. Available buckets: ' +
-              buckets.map(b => b.name).join(', ') +
-              '\n\nPlease create a bucket named "voice-recordings" in Supabase Storage.')
+            alert('Storage bucket "voice-recordings" not found. Please create one in Supabase Storage.')
             return
           }
         }
@@ -132,19 +119,14 @@ export default function VoiceRecord() {
 
       const fileName = `${user.id}/${prompt.id}-${Date.now()}.webm`
 
-      // Upload to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucketName)
         .upload(fileName, audioBlob, { contentType: 'audio/webm' })
 
       if (uploadError) {
-        console.error('Storage upload error:', uploadError)
-        throw new Error('Storage upload: ' + (uploadError.message || uploadError.error || JSON.stringify(uploadError)))
+        throw new Error('Storage upload: ' + (uploadError.message || JSON.stringify(uploadError)))
       }
 
-      console.log('Upload success:', uploadData)
-
-      // Save recording reference
       const { error: dbError } = await supabase.from('voice_recordings').insert({
         user_id: user.id,
         prompt_id: prompt.id,
@@ -153,11 +135,9 @@ export default function VoiceRecord() {
       })
 
       if (dbError) {
-        console.error('DB insert error:', dbError)
         throw new Error('Database save: ' + dbError.message)
       }
 
-      // If first prompt done, go to main app. Otherwise next prompt.
       if (currentPrompt === 0) {
         navigate('/worlds')
       } else {
@@ -173,25 +153,27 @@ export default function VoiceRecord() {
   }
 
   return (
-    <div className={`min-h-screen ${meta.bgClass} flex flex-col px-6 py-12`}>
-      <div className="max-w-md mx-auto w-full flex-1 flex flex-col">
+    <div className={`min-h-screen ${meta.bgClass} flex flex-col px-6 py-12 relative overflow-hidden`}>
+      <AmbientBackground world={world} />
+
+      <div className="max-w-md mx-auto w-full flex-1 flex flex-col relative z-10">
         {/* Header */}
         <div className="mb-8">
-          <p className="text-kingdom-gold/60 text-sm tracking-[0.2em] uppercase mb-2">
+          <p className="text-kingdom-gold/50 text-sm tracking-[0.15em] uppercase mb-2 font-display">
             {meta.emoji} {meta.name} — Quest {currentPrompt + 1} of {prompts.length}
           </p>
-          <h1 className="font-display text-2xl font-bold text-white mb-1">
+          <h1 className="font-display text-2xl font-bold text-shimmer mb-1">
             Your Voice, Your Power
           </h1>
-          <p className="text-white/40 text-sm">
+          <p className="text-white/35 text-sm">
             Record your response to this quest prompt. This is how others will discover you.
           </p>
         </div>
 
         {/* Narrator text */}
-        <div className="card-dark mb-6">
-          <p className="text-white/30 text-xs uppercase tracking-wider mb-3">
-            🎭 The Narrator speaks...
+        <div className="card-ornate mb-6">
+          <p className="text-kingdom-gold/40 text-xs uppercase tracking-[0.2em] mb-3 font-display">
+            The Narrator speaks...
           </p>
           <p className="text-white/50 text-sm italic leading-relaxed">
             "{prompt.narrator}"
@@ -199,8 +181,14 @@ export default function VoiceRecord() {
         </div>
 
         {/* Quest prompt */}
-        <div className="bg-kingdom-gold/5 border border-kingdom-gold/20 rounded-2xl p-6 mb-8">
-          <p className="text-kingdom-gold text-base leading-relaxed">
+        <div className="rounded-2xl p-6 mb-8 relative overflow-hidden"
+             style={{
+               background: 'linear-gradient(145deg, rgba(212,168,67,0.06) 0%, rgba(212,168,67,0.02) 100%)',
+               border: '1px solid rgba(212,168,67,0.2)',
+               boxShadow: '0 0 40px rgba(212,168,67,0.05)',
+             }}>
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-kingdom-gold/30 to-transparent" />
+          <p className="text-kingdom-gold/90 text-base leading-relaxed font-display">
             "{prompt.text}"
           </p>
         </div>
@@ -209,13 +197,12 @@ export default function VoiceRecord() {
         <div className="flex-1 flex flex-col items-center justify-center">
           {!recorded ? (
             <>
-              {/* Record button */}
               <button
                 onClick={isRecording ? stopRecording : startRecording}
                 className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300
                   ${isRecording
-                    ? 'bg-red-500 scale-110 animate-pulse'
-                    : 'bg-kingdom-gold hover:scale-105'
+                    ? 'bg-red-500 scale-110 pulse-ring'
+                    : 'bg-gradient-gold hover:scale-105 glow-gold'
                   }`}
               >
                 {isRecording ? (
@@ -228,8 +215,8 @@ export default function VoiceRecord() {
                 )}
               </button>
 
-              <p className="text-white/40 text-sm mt-4">
-                {isRecording ? 'Recording... Tap to stop' : 'Tap to start recording'}
+              <p className="text-white/35 text-sm mt-4">
+                {isRecording ? '✦ Recording... Tap to stop' : 'Tap to start recording'}
               </p>
 
               {isRecording && (
@@ -246,16 +233,12 @@ export default function VoiceRecord() {
             </>
           ) : (
             <>
-              {/* Playback */}
-              <div className="w-full card-dark mb-6">
+              <div className="w-full card-ornate mb-6">
                 <audio src={audioUrl} controls className="w-full" />
               </div>
 
               <div className="flex gap-3 w-full">
-                <button
-                  onClick={reRecord}
-                  className="btn-outline flex-1"
-                >
+                <button onClick={reRecord} className="btn-outline flex-1">
                   Re-record
                 </button>
                 <button
@@ -273,7 +256,7 @@ export default function VoiceRecord() {
         {/* Skip option */}
         <button
           onClick={() => navigate('/worlds')}
-          className="text-white/30 text-sm text-center mt-6 hover:text-white/50"
+          className="text-white/20 text-sm text-center mt-6 hover:text-white/40 transition-colors"
         >
           Skip for now
         </button>

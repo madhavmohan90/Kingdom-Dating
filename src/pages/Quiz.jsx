@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import AmbientBackground from '../components/AmbientBackground'
 
 const questions = [
   {
@@ -55,17 +56,6 @@ const questions = [
   },
 ]
 
-const archetypeInfo = {
-  protector: { name: "The Protector", emoji: "🛡️" },
-  genius: { name: "The Genius", emoji: "🧠" },
-  rebel: { name: "The Rebel", emoji: "⚡" },
-  romantic: { name: "The Romantic", emoji: "🌹" },
-  commander: { name: "The Commander", emoji: "👑" },
-  adventurer: { name: "The Adventurer", emoji: "🗺️" },
-  healer: { name: "The Healer", emoji: "✨" },
-  wildcard: { name: "The Wildcard", emoji: "🃏" },
-}
-
 export default function Quiz() {
   const navigate = useNavigate()
   const [current, setCurrent] = useState(0)
@@ -78,22 +68,17 @@ export default function Quiz() {
   const handleSelect = (option) => {
     setSelected(option)
 
-    // Tally archetype scores
     const newAnswers = { ...answers }
     newAnswers[option.archetype] = (newAnswers[option.archetype] || 0) + 1
     setAnswers(newAnswers)
 
-    // Auto-advance after brief delay
     setTimeout(() => {
       if (current < questions.length - 1) {
         setCurrent(current + 1)
         setSelected(null)
       } else {
-        // Quiz complete — find dominant archetype
         const sorted = Object.entries(newAnswers).sort((a, b) => b[1] - a[1])
         const result = sorted[0][0]
-
-        // Save to Supabase and navigate
         saveArchetype(result)
       }
     }, 600)
@@ -108,15 +93,17 @@ export default function Quiz() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-kingdom flex flex-col px-6 py-12">
-      <div className="max-w-md mx-auto w-full">
+    <div className="min-h-screen bg-gradient-kingdom flex flex-col px-6 py-12 relative overflow-hidden">
+      <AmbientBackground world="kingdom" />
+
+      <div className="max-w-md mx-auto w-full relative z-10">
         {/* Progress bar */}
         <div className="mb-8">
-          <div className="flex justify-between text-white/40 text-xs mb-2">
+          <div className="flex justify-between text-white/30 text-xs mb-2 font-display">
             <span>Quest {current + 1} of {questions.length}</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+          <div className="h-1 bg-white/5 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-gold rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
@@ -126,10 +113,13 @@ export default function Quiz() {
 
         {/* Question */}
         <div className="animate-fade-in" key={current}>
-          <p className="text-white/40 text-sm mb-3 font-medium tracking-wider uppercase">
-            The Oracle Asks...
-          </p>
-          <h2 className="font-display text-xl md:text-2xl text-white mb-8 leading-relaxed">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-kingdom-gold/30 text-xs">✦</span>
+            <p className="text-kingdom-gold/40 text-xs font-display tracking-[0.2em] uppercase">
+              The Oracle Asks...
+            </p>
+          </div>
+          <h2 className="font-display text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
             {question.prompt}
           </h2>
 
@@ -140,14 +130,17 @@ export default function Quiz() {
                 key={idx}
                 onClick={() => handleSelect(option)}
                 disabled={selected !== null}
-                className={`w-full text-left p-4 rounded-xl border transition-all duration-300
+                className={`w-full text-left p-4 rounded-xl border transition-all duration-300 relative overflow-hidden
                   ${selected === option
-                    ? 'bg-kingdom-gold/20 border-kingdom-gold text-kingdom-gold scale-[1.02]'
+                    ? 'bg-kingdom-gold/15 border-kingdom-gold/40 text-kingdom-gold scale-[1.02]'
                     : selected !== null
-                      ? 'opacity-40 border-white/5 bg-white/3'
-                      : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8 active:scale-[0.98]'
+                      ? 'opacity-30 border-white/5 bg-white/3'
+                      : 'border-kingdom-gold/8 bg-white/4 hover:border-kingdom-gold/20 hover:bg-kingdom-gold/5 active:scale-[0.98]'
                   }`}
               >
+                {selected === option && (
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-kingdom-gold/40 to-transparent" />
+                )}
                 <span className="text-sm">{option.text}</span>
               </button>
             ))}
