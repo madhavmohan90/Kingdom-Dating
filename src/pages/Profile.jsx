@@ -1,14 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { worldMeta } from '../data/prompts'
 
 export default function Profile() {
   const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
+  const [recordings, setRecordings] = useState([])
   const [loading, setLoading] = useState(true)
+  const [playingId, setPlayingId] = useState(null)
+  const audioRef = useRef(null)
 
   useEffect(() => {
     loadProfile()
+    return () => { if (audioRef.current) audioRef.current.pause() }
   }, [])
 
   const loadProfile = async () => {
@@ -23,10 +28,45 @@ export default function Profile() {
         .single()
 
       setProfile(data)
+
+      // Load user's recordings
+      const { data: recs } = await supabase
+        .from('voice_recordings')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      setRecordings(recs || [])
     } catch (err) {
       console.error('Error loading profile:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const playRecording = async (rec) => {
+    try {
+      if (audioRef.current && playingId === rec.id) {
+        audioRef.current.pause()
+        audioRef.current = null
+        setPlayingId(null)
+        return
+      }
+      if (audioRef.current) audioRef.current.pause()
+
+      const { data, error } = await supabase.storage
+        .from('voice-recordings')
+        .createSignedUrl(rec.storage_path, 300)
+
+      if (error) throw error
+
+      const audio = new Audio(data.signedUrl)
+      audioRef.current = audio
+      audio.onended = () => setPlayingId(null)
+      await audio.play()
+      setPlayingId(rec.id)
+    } catch (err) {
+      console.error('Error playing recording:', err)
     }
   }
 
@@ -78,12 +118,57 @@ export default function Profile() {
           <div className="border-t border-white/10 pt-4 mt-4">
             <p className="text-white font-medium">{profile?.name}</p>
             <p className="text-white/40 text-sm">{profile?.age} years old</p>
+            {profile?.selected_world && (
+              <p className="text-white/30 text-xs mt-1">
+                {(worldMeta[profile.selected_world] || worldMeta.kingdom).emoji}{' '}
+                {(worldMeta[profile.selected_world] || worldMeta.kingdom).name}
+              </p>
+            )}
           </div>
         </div>
 
         {/* Voice recordings */}
         <div className="card-dark mb-6">
-          <h3 className="text-white/60 text-sm font-medium mb-4">Your Voice Recordings</h3>
+          <h3 className="text-white/60 text-sm font-medium mb-4">
+            Your Voice Recordings ({recordings.length})
+          </h3>
+
+          {recordings.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {recordings.map(rec => (
+                <button
+                  key={rec.id}
+                  onClick={() => playRecording(rec)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left ${
+                    playingId === rec.id
+                      ? 'bg-kingdom-gold/15 border border-kingdom-gold/30'
+                      : 'bg-white/5 border border-white/5 hover:bg-white/8'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    playingId === rec.id ? 'bg-kingdom-gold' : 'bg-white/10'
+                  }`}>
+                    {playingId === rec.id ? (
+                      <svg className="w-3.5 h-3.5 text-kingdom-darker" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                      </svg>
+                    ) : (
+                      <svg className="w-3.5 h-3.5 text-white/60" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white/70 text-sm truncate">{rec.prompt_id}</p>
+                    <p className="text-white/30 text-xs">
+                      {rec.is_primary ? '★ Primary' : 'Quest response'}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
           <button
             onClick={() => navigate('/voice-record')}
             className="w-full py-3 rounded-xl border border-dashed border-white/20 text-white/40 text-sm hover:border-kingdom-gold/30 hover:text-kingdom-gold/60 transition-colors"
