@@ -1,30 +1,12 @@
-import { useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-
-const prompts = [
-  {
-    id: 'kingdom-1',
-    world: 'kingdom',
-    text: "You've been crowned ruler for a day. In 30 seconds, give the speech that makes your kingdom fall in love with you.",
-    narrator: "The throne room falls silent. A thousand eyes are on you. Speak.",
-  },
-  {
-    id: 'kingdom-2',
-    world: 'kingdom',
-    text: "A dragon has taken someone you love. You have one message to send them before you ride out. What do you say?",
-    narrator: "The messenger waits. Your words may be the last they hear.",
-  },
-  {
-    id: 'kingdom-3',
-    world: 'kingdom',
-    text: "You find a wounded stranger on the road. They ask you to tell them a story to keep them awake. Begin.",
-    narrator: "The night is dark. Your voice is all that stands between them and silence.",
-  },
-]
+import { worldPrompts, worldMeta } from '../data/prompts'
 
 export default function VoiceRecord() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const [world, setWorld] = useState('kingdom')
   const [currentPrompt, setCurrentPrompt] = useState(0)
   const [isRecording, setIsRecording] = useState(false)
   const [audioBlob, setAudioBlob] = useState(null)
@@ -34,6 +16,24 @@ export default function VoiceRecord() {
   const mediaRecorder = useRef(null)
   const chunks = useRef([])
 
+  // Load user's selected world
+  useEffect(() => {
+    const loadWorld = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('selected_world')
+          .eq('id', session.user.id)
+          .single()
+        if (data?.selected_world) setWorld(data.selected_world)
+      }
+    }
+    loadWorld()
+  }, [])
+
+  const prompts = worldPrompts[world] || worldPrompts.kingdom
+  const meta = worldMeta[world] || worldMeta.kingdom
   const prompt = prompts[currentPrompt]
 
   const startRecording = async () => {
@@ -173,12 +173,12 @@ export default function VoiceRecord() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-kingdom flex flex-col px-6 py-12">
+    <div className={`min-h-screen ${meta.bgClass} flex flex-col px-6 py-12`}>
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col">
         {/* Header */}
         <div className="mb-8">
           <p className="text-kingdom-gold/60 text-sm tracking-[0.2em] uppercase mb-2">
-            Quest Voice Recording
+            {meta.emoji} {meta.name} — Quest {currentPrompt + 1} of {prompts.length}
           </p>
           <h1 className="font-display text-2xl font-bold text-white mb-1">
             Your Voice, Your Power

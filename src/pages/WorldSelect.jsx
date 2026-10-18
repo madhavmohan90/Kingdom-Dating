@@ -18,7 +18,7 @@ const worlds = [
     description: 'Deep space, cosmic signals, and voices that travel across galaxies.',
     emoji: '🌌',
     gradient: 'from-indigo-900/30 to-kingdom-darker',
-    available: false,
+    available: true,
   },
   {
     id: 'shadows',
@@ -27,7 +27,7 @@ const worlds = [
     description: 'Dark forests, ancient secrets, and voices that whisper in the mist.',
     emoji: '🌑',
     gradient: 'from-slate-900/30 to-kingdom-darker',
-    available: false,
+    available: true,
   },
 ]
 
