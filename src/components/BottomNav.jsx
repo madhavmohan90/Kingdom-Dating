@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 
 const tabs = [
-  { id: 'worlds', label: 'Worlds', icon: '🏰', path: '/worlds' },
+  { id: 'worlds', label: 'Voices', icon: '🔮', path: '/worlds' },
   { id: 'likes', label: 'Likes', icon: '💛', path: '/likes' },
   { id: 'chats', label: 'Chats', icon: '🎙️', path: '/chats' },
-  { id: 'me', label: 'Me', icon: '👤', path: '/me' },
+  { id: 'me', label: 'Me', icon: '🌙', path: '/me' },
 ]
 
 export default function BottomNav({ active }) {

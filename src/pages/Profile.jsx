@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { worldMeta, questById, trialKinds } from '../data/prompts'
+import { getQuest } from '../data/prompts'
 import AmbientBackground from '../components/AmbientBackground'
 
 export default function Profile() {
@@ -90,20 +90,6 @@ export default function Profile() {
     navigate('/')
   }
 
-  const getArchetypeDisplay = (archetype) => {
-    const map = {
-      protector: { emoji: '🛡️', name: 'The Protector', title: 'Guardian of the Realm' },
-      genius: { emoji: '🧠', name: 'The Genius', title: 'Keeper of Forbidden Knowledge' },
-      rebel: { emoji: '⚡', name: 'The Rebel', title: 'Breaker of Chains' },
-      romantic: { emoji: '🌹', name: 'The Romantic', title: 'Voice of the Heart' },
-      commander: { emoji: '👑', name: 'The Commander', title: 'Ruler of Destiny' },
-      adventurer: { emoji: '🗺️', name: 'The Adventurer', title: 'Walker Between Worlds' },
-      healer: { emoji: '✨', name: 'The Healer', title: 'Mender of Souls' },
-      wildcard: { emoji: '🃏', name: 'The Wildcard', title: 'Trickster of the Court' },
-    }
-    return map[archetype] || { emoji: '🔮', name: 'Your Legend', title: 'A voice in the realm' }
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-kingdom flex items-center justify-center pb-20 relative overflow-hidden">
@@ -113,9 +99,7 @@ export default function Profile() {
     )
   }
 
-  const archetype = getArchetypeDisplay(profile?.archetype)
-  const world = profile?.selected_world || 'kingdom'
-  const wMeta = worldMeta[world] || worldMeta.kingdom
+  const world = 'kingdom'
 
   return (
     <div className="min-h-screen bg-gradient-kingdom px-6 pt-12 pb-24 relative overflow-hidden">
@@ -130,27 +114,21 @@ export default function Profile() {
 
         {/* Archetype card */}
         <div className="card-ornate text-center mb-6">
-          <div className="text-5xl mb-3 animate-float-slow">{archetype.emoji}</div>
-          <h2 className="font-display text-xl text-shimmer mb-1">
-            {archetype.name}
+          <div className="text-5xl mb-3 animate-float-slow">{profile?.gender === 'female' ? '🌙' : '⚔️'}</div>
+          <h2 className="font-display text-2xl text-shimmer mb-1">
+            {profile?.name || 'Wanderer'}
           </h2>
           <p className="text-white/40 text-sm italic mb-4">
-            {archetype.title}
+            {profile?.gender === 'female' ? 'A Queen of the night' : 'A King of the night'}
           </p>
-          <div className="divider-ornate mb-4">✦</div>
-          <p className="text-white font-medium">{profile?.name}</p>
-          {profile?.selected_world && (
-            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-kingdom-gold/5 border border-kingdom-gold/15">
-              <span className="text-sm">{wMeta.emoji}</span>
-              <span className="text-kingdom-gold/60 text-xs font-display">{wMeta.name}</span>
-            </div>
-          )}
+          <div className="divider-ornate mb-2">✦</div>
+          {profile?.bio && <p className="text-white/50 text-sm italic mt-3">"{profile.bio}"</p>}
         </div>
 
         {/* Voice recordings */}
         <div className="card-ornate mb-6">
           <h3 className="text-kingdom-gold/50 text-sm font-display tracking-wide mb-4">
-            Voice Recordings ({recordings.length})
+            Your Voice Trials
           </h3>
 
           {recordings.length > 0 && (
@@ -179,9 +157,9 @@ export default function Profile() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white/70 text-sm truncate">{questById[rec.prompt_id]?.text || rec.prompt_id}</p>
+                    <p className="text-white/70 text-sm truncate">{getQuest(rec.prompt_id).text}</p>
                     <p className="text-white/30 text-xs">
-                      {questById[rec.prompt_id] ? trialKinds[questById[rec.prompt_id].kind].label : 'Your voice'}
+                      {getQuest(rec.prompt_id).label}
                     </p>
                   </div>
                 </button>

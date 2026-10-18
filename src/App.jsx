@@ -6,9 +6,6 @@ import { supabase } from './lib/supabase'
 import Landing from './pages/Landing'
 import SignUp from './pages/SignUp'
 import Gate from './pages/Gate'
-import Quiz from './pages/Quiz'
-import ArchetypeReveal from './pages/ArchetypeReveal'
-import WorldSelect from './pages/WorldSelect'
 import VoiceRecord from './pages/VoiceRecord'
 import Discover from './pages/Discover'
 import Likes from './pages/Likes'
@@ -19,6 +16,31 @@ import EditProfile from './pages/EditProfile'
 
 // Components
 import BottomNav from './components/BottomNav'
+
+// Sends a returning visitor to the right place:
+// no voice yet -> the three trials, otherwise -> the voices.
+function Entry() {
+  const [dest, setDest] = useState(null)
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return setDest('/')
+      const { count } = await supabase
+        .from('voice_recordings')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+      setDest(count > 0 ? '/worlds' : '/voice-record')
+    })()
+  }, [])
+  if (!dest) {
+    return (
+      <div className="min-h-screen bg-kingdom-darker flex items-center justify-center">
+        <div className="text-kingdom-gold font-display text-xl animate-pulse">Opening the gate…</div>
+      </div>
+    )
+  }
+  return <Navigate to={dest} replace />
+}
 
 function App() {
   const [session, setSession] = useState(null)
@@ -51,14 +73,14 @@ function App() {
     <div className="min-h-screen bg-kingdom-darker">
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={session ? <Navigate to="/worlds" /> : <Landing />} />
+        <Route path="/" element={session ? <Entry /> : <Landing />} />
         <Route path="/gate" element={<Gate />} />
         <Route path="/signup" element={<SignUp />} />
 
         {/* Onboarding routes */}
-        <Route path="/quiz" element={<Quiz />} />
-        <Route path="/archetype" element={<ArchetypeReveal />} />
-        <Route path="/world-select" element={<WorldSelect />} />
+        <Route path="/quiz" element={<Navigate to="/voice-record" replace />} />
+        <Route path="/archetype" element={<Navigate to="/voice-record" replace />} />
+        <Route path="/world-select" element={<Navigate to="/worlds" replace />} />
         <Route path="/voice-record" element={<VoiceRecord />} />
 
         {/* Chat room and edit profile (no bottom nav) */}

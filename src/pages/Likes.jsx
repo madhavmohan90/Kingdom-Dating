@@ -29,7 +29,7 @@ export default function Likes() {
           id, created_at,
           liker:profiles!likes_liker_id_fkey (
             id, name, archetype,
-            voice_recordings ( id, storage_path, is_primary )
+            voice_recordings ( id, storage_path, is_primary, created_at )
           )
         `)
         .eq('liked_id', user.id)
@@ -45,8 +45,8 @@ export default function Likes() {
 
   const playVoice = async (like) => {
     try {
-      const recording = like.liker?.voice_recordings?.find(r => r.is_primary)
-        || like.liker?.voice_recordings?.[0]
+      const recording = [...(like.liker?.voice_recordings || [])]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
 
       if (!recording) return
 

@@ -32,6 +32,31 @@ export const questPool = [
 
 export const questById = Object.fromEntries(questPool.map(q => [q.id, q]))
 
+// Finds the question for any recording, including answers made before the
+// three-trial update (those get a generic label so the text is never blank).
+export function getQuest(id) {
+  if (questById[id]) {
+    const q = questById[id]
+    return { text: q.text, label: `${trialKinds[q.kind].emoji} ${trialKinds[q.kind].label}` }
+  }
+  for (const list of Object.values(worldPrompts)) {
+    const old = list.find(q => q.id === id)
+    if (old) return { text: old.text, label: '✦ An earlier trial' }
+  }
+  return { text: 'A voice from an earlier time', label: '✦ Their voice' }
+}
+
+// Gentle nudges for the chat when the talk goes quiet
+export const nudges = [
+  ...questPool.map(q => q.text),
+  'Tell them the strangest dream you ever had.',
+  'Describe your perfect night in the realm — no phones, no rules.',
+  'If you could have any magical power, but only for one day, what would you do with it?',
+  'Tell them the last thing that made you laugh so hard you cried.',
+  'What would your dragon be called, and what would it be afraid of?',
+  'Hum a few seconds of the song stuck in your head.',
+]
+
 // One random trial from each kind: drama, sacrifice, funny.
 export function pickTrials() {
   return ['drama', 'sacrifice', 'funny'].map(kind => {

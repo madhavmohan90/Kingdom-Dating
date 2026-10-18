@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { nudges } from '../data/prompts'
+import AmbientBackground from '../components/AmbientBackground'
 
 export default function ChatRoom() {
   const { matchId } = useParams()
@@ -16,6 +18,8 @@ export default function ChatRoom() {
   const chunks = useRef([])
   const audioRef = useRef(null)
   const messagesEndRef = useRef(null)
+  const [nudge, setNudge] = useState(null)
+  const [nudgeDismissedAt, setNudgeDismissedAt] = useState(-1)
 
   useEffect(() => {
     loadChat()
@@ -195,6 +199,18 @@ export default function ChatRoom() {
     return map[archetype] || '🔮'
   }
 
+  const randomNudge = () => nudges[Math.floor(Math.random() * nudges.length)]
+
+  // The Oracle whispers when the chat is new, every 4th message, or has gone cold (1 hour+).
+  useEffect(() => {
+    if (loading || nudgeDismissedAt === messages.length) return
+    const last = messages[messages.length - 1]
+    const cold = last && Date.now() - new Date(last.created_at).getTime() > 60 * 60 * 1000
+    const due = messages.length === 0 || messages.length % 4 === 0 || cold
+    if (due) setNudge(n => n || randomNudge())
+    else setNudge(null)
+  }, [messages.length, loading, nudgeDismissedAt])
+
   const formatTime = (timestamp) => {
     const date = new Date(timestamp)
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -209,9 +225,10 @@ export default function ChatRoom() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-kingdom flex flex-col">
+    <div className="min-h-screen bg-gradient-kingdom flex flex-col relative overflow-hidden">
+      <AmbientBackground world="kingdom" />
       {/* Header */}
-      <div className="px-6 pt-12 pb-4 border-b border-white/5">
+      <div className="px-6 pt-12 pb-4 border-b border-white/5 relative z-10">
         <div className="max-w-md mx-auto flex items-center gap-4">
           <button
             onClick={() => navigate('/chats')}
@@ -230,12 +247,12 @@ export default function ChatRoom() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="flex-1 overflow-y-auto px-6 py-4 relative z-10">
         <div className="max-w-md mx-auto space-y-3">
           {messages.length === 0 && (
             <div className="text-center py-16">
               <p className="text-white/30 text-sm">
-                Send the first voice note to begin your quest together.
+                Say hello with your voice. Not sure what to say? The Oracle has an idea below.
               </p>
             </div>
           )}
@@ -300,7 +317,17 @@ export default function ChatRoom() {
       </div>
 
       {/* Record button */}
-      <div className="px-6 py-6 border-t border-white/5">
+      <div className="px-6 py-6 border-t border-white/5 relative z-10">
+        {nudge && (
+          <div className="max-w-md mx-auto mb-5 rounded-xl border border-kingdom-gold/25 bg-kingdom-gold/5 p-4 animate-fade-in">
+            <p className="text-kingdom-gold/60 text-[10px] uppercase tracking-[0.25em] font-display mb-2">🔮 The Oracle whispers</p>
+            <p className="text-white/80 text-sm leading-snug font-display">{nudge}</p>
+            <div className="flex gap-4 mt-3 text-xs">
+              <button onClick={() => setNudge(randomNudge())} className="text-kingdom-gold/70 hover:text-kingdom-gold">Another</button>
+              <button onClick={() => { setNudge(null); setNudgeDismissedAt(messages.length) }} className="text-white/30 hover:text-white/50">Not now</button>
+            </div>
+          </div>
+        )}
         <div className="max-w-md mx-auto flex justify-center">
           {uploading ? (
             <div className="text-kingdom-gold/60 text-sm animate-pulse">

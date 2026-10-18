@@ -2,9 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import MatchCelebration from '../components/MatchCelebration'
 import AmbientBackground from '../components/AmbientBackground'
-import { worldMeta, questById, trialKinds } from '../data/prompts'
+import { getQuest } from '../data/prompts'
+import { useNavigate } from 'react-router-dom'
 
 export default function Discover() {
+  const navigate = useNavigate()
   const [profiles, setProfiles] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [playingPath, setPlayingPath] = useState(null)
@@ -42,6 +44,13 @@ export default function Discover() {
 
       if (!myProfile) return
 
+      // Nobody browses until they have spoken
+      const { count: myVoices } = await supabase
+        .from('voice_recordings')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+      if (!myVoices) { navigate('/voice-record', { replace: true }); return }
+
       setMyWorld(myProfile.selected_world || 'kingdom')
       const oppositeGender = myProfile.gender === 'female' ? 'male' : 'female'
 
@@ -56,10 +65,9 @@ export default function Discover() {
         .from('profiles')
         .select(`
           id, name, archetype, selected_world,
-          voice_recordings ( id, prompt_id, storage_path, is_primary, duration_seconds )
+          voice_recordings ( id, prompt_id, storage_path, is_primary, created_at )
         `)
         .eq('gender', oppositeGender)
-        .eq('selected_world', myProfile.selected_world || 'kingdom')
         .neq('id', user.id)
         .limit(20)
 
@@ -195,14 +203,14 @@ export default function Discover() {
     touchStart.current = null
   }, [swipeOffset])
 
-  const meta = worldMeta[myWorld] || worldMeta.kingdom
+  const meta = { bgClass: 'bg-gradient-kingdom' }
 
   if (loading) {
     return (
       <div className={`min-h-screen ${meta.bgClass} flex items-center justify-center pb-20 relative overflow-hidden`}>
         <AmbientBackground world={myWorld} />
         <div className="text-kingdom-gold animate-pulse font-display text-xl relative z-10">
-          Entering {meta.name}...
+          Entering the dark...
         </div>
       </div>
     )
@@ -213,9 +221,9 @@ export default function Discover() {
       <div className={`min-h-screen ${meta.bgClass} flex flex-col items-center justify-center px-6 pb-20 text-center relative overflow-hidden`}>
         <AmbientBackground world={myWorld} />
         <div className="relative z-10">
-          <div className="text-6xl mb-6 animate-float-slow">{meta.emoji}</div>
+          <div className="text-6xl mb-6 animate-float-slow">🐉</div>
           <h2 className="font-display text-2xl text-shimmer mb-3">
-            The Realm Awaits
+            The Night Is Quiet
           </h2>
           <p className="text-white/40 text-sm max-w-xs leading-relaxed">
             No new voices right now. New souls arrive every day — come back soon.
@@ -229,7 +237,7 @@ export default function Discover() {
   // Newest answer per question, at most three
   const seen = new Set()
   const recordings = [...(currentProfile.voice_recordings || [])]
-    .sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .filter(r => !seen.has(r.prompt_id) && seen.add(r.prompt_id))
     .slice(0, 3)
 
@@ -241,10 +249,10 @@ export default function Discover() {
         {/* World header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <p className="text-white/30 text-xs tracking-[0.2em] uppercase">Exploring</p>
-            <h1 className="font-display text-xl text-shimmer">{meta.name}</h1>
+            <p className="text-white/30 text-xs tracking-[0.2em] uppercase">Listen closely</p>
+            <h1 className="font-display text-xl text-shimmer">Voices in the Dark</h1>
           </div>
-          <span className="text-2xl animate-float-slow">{meta.emoji}</span>
+          <span className="text-2xl animate-float-slow">🔮</span>
         </div>
 
         {/* Voice card — swipeable */}
@@ -269,7 +277,7 @@ export default function Discover() {
           {/* Their trials */}
           <div className="space-y-3 mb-6">
             {recordings.map(rec => {
-              const q = questById[rec.prompt_id]
+              const q = getQuest(rec.prompt_id)
               const playing = playingPath === rec.storage_path
               return (
                 <button
@@ -290,9 +298,9 @@ export default function Discover() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-kingdom-gold/50 text-[10px] uppercase tracking-[0.2em] font-display mb-1">
-                      {q ? `${trialKinds[q.kind].emoji} ${trialKinds[q.kind].label}` : '✦ Their voice'}
+                      {q.label}
                     </p>
-                    <p className="text-white/70 text-sm leading-snug">{q ? q.text : 'Tap to listen'}</p>
+                    <p className="text-white/70 text-sm leading-snug">{q.text}</p>
                   </div>
                 </button>
               )

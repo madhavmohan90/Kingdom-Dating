@@ -20,7 +20,7 @@ export default function SignUp() {
       {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-        navigate('/worlds')
+        navigate('/')
       }
     } catch (err) {
       setError(err.message)
