@@ -126,6 +126,11 @@ export default function Gate() {
           <span className="relative z-10">{loading ? 'The gate opens...' : 'Step Through'}</span>
           <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         </button>
+        {(!path || !sworn) && (
+          <p className="text-kingdom-gold/50 text-xs text-center mt-3 font-display">
+            {!path ? 'Choose your path above.' : 'Tap the oath above to proceed.'}
+          </p>
+        )}
       </div>
     </div>
   )
