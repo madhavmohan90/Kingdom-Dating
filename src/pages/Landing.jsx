@@ -41,7 +41,7 @@ export default function Landing() {
           Fall for a voice. Not a face.
         </p>
         <p className="text-white/40 text-sm mb-12 max-w-xs mx-auto leading-relaxed">
-          No forms. No photos. Step through the gate, answer the Oracle, and let your voice find its match.
+          No photos. No forms. Answer three wild trials with your voice — dragons, vampires, love potions — and fall for someone by how they answer.
         </p>
 
         {/* CTA Buttons */}

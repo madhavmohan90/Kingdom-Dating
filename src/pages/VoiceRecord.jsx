@@ -1,218 +1,170 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { worldPrompts, worldMeta } from '../data/prompts'
+import { pickTrials, trialKinds, questPool } from '../data/prompts'
 import AmbientBackground from '../components/AmbientBackground'
+
+const MAX_SECONDS = 60
 
 export default function VoiceRecord() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const [world, setWorld] = useState('kingdom')
-  const [currentPrompt, setCurrentPrompt] = useState(0)
+  const [trials, setTrials] = useState(() => pickTrials())
+  const [step, setStep] = useState(0)
   const [isRecording, setIsRecording] = useState(false)
+  const [seconds, setSeconds] = useState(0)
   const [audioBlob, setAudioBlob] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
   const [uploading, setUploading] = useState(false)
-  const [recorded, setRecorded] = useState(false)
+  const [savedCount, setSavedCount] = useState(0)
   const mediaRecorder = useRef(null)
   const chunks = useRef([])
+  const timer = useRef(null)
 
-  useEffect(() => {
-    const loadWorld = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('selected_world')
-          .eq('id', session.user.id)
-          .single()
-        if (data?.selected_world) setWorld(data.selected_world)
-      }
-    }
-    loadWorld()
-  }, [])
+  const trial = trials[step]
+  const kind = trialKinds[trial.kind]
 
-  const prompts = worldPrompts[world] || worldPrompts.kingdom
-  const meta = worldMeta[world] || worldMeta.kingdom
-  const prompt = prompts[currentPrompt]
+  useEffect(() => () => clearInterval(timer.current), [])
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       mediaRecorder.current = new MediaRecorder(stream)
       chunks.current = []
-
-      mediaRecorder.current.ondataavailable = (e) => {
-        chunks.current.push(e.data)
-      }
-
+      mediaRecorder.current.ondataavailable = e => chunks.current.push(e.data)
       mediaRecorder.current.onstop = () => {
         const blob = new Blob(chunks.current, { type: 'audio/webm' })
         setAudioBlob(blob)
         setAudioUrl(URL.createObjectURL(blob))
-        setRecorded(true)
-        stream.getTracks().forEach(track => track.stop())
+        stream.getTracks().forEach(t => t.stop())
       }
-
       mediaRecorder.current.start()
       setIsRecording(true)
-
-      setTimeout(() => {
-        if (mediaRecorder.current?.state === 'recording') {
-          mediaRecorder.current.stop()
-          setIsRecording(false)
-        }
-      }, 60000)
-    } catch (err) {
+      setSeconds(0)
+      timer.current = setInterval(() => {
+        setSeconds(s => {
+          if (s + 1 >= MAX_SECONDS) stopRecording()
+          return s + 1
+        })
+      }, 1000)
+    } catch {
       alert('Please allow microphone access to record your voice.')
     }
   }
 
   const stopRecording = () => {
-    if (mediaRecorder.current?.state === 'recording') {
-      mediaRecorder.current.stop()
-      setIsRecording(false)
-    }
+    clearInterval(timer.current)
+    if (mediaRecorder.current?.state === 'recording') mediaRecorder.current.stop()
+    setIsRecording(false)
   }
 
   const reRecord = () => {
     setAudioBlob(null)
     setAudioUrl(null)
-    setRecorded(false)
+    setSeconds(0)
   }
 
-  const uploadAndContinue = async () => {
-    setUploading(true)
+  const goNext = (count) => {
+    if (step < trials.length - 1) {
+      setStep(step + 1)
+      reRecord()
+    } else {
+      navigate(count > 0 ? '/worlds' : '/me')
+    }
+  }
 
+  // Swap the current question for another of the same kind.
+  const reroll = () => {
+    const others = questPool.filter(q => q.kind === trial.kind && q.id !== trial.id)
+    const next = others[Math.floor(Math.random() * others.length)]
+    setTrials(ts => ts.map((t, i) => (i === step ? next : t)))
+  }
+
+  const saveAndContinue = async () => {
+    if (!audioBlob) return
+    setUploading(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      let user = session?.user
+      const user = session?.user
       if (!user) {
-        const { data: { user: serverUser }, error: authError } = await supabase.auth.getUser()
-        user = serverUser
-        if (authError || !user) {
-          alert('You need to log in first to save your recording.')
-          navigate('/signup')
-          return
-        }
-      }
-      if (!audioBlob) {
-        alert('No recording found. Please record your voice first.')
+        alert('Your session ended. Please enter the realm again.')
+        navigate('/gate')
         return
       }
 
-      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets()
-
-      let bucketName = 'voice-recordings'
-      if (buckets && buckets.length > 0) {
-        const exactMatch = buckets.find(b => b.name === 'voice-recordings')
-        if (!exactMatch) {
-          const voiceBucket = buckets.find(b => b.name.toLowerCase().includes('voice'))
-          if (voiceBucket) {
-            bucketName = voiceBucket.name
-          } else {
-            alert('Storage bucket "voice-recordings" not found. Please create one in Supabase Storage.')
-            return
-          }
-        }
-      }
-
-      const fileName = `${user.id}/${prompt.id}-${Date.now()}.webm`
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(bucketName)
+      const fileName = `${user.id}/${trial.id}-${Date.now()}.webm`
+      const { error: uploadError } = await supabase.storage
+        .from('voice-recordings')
         .upload(fileName, audioBlob, { contentType: 'audio/webm' })
-
-      if (uploadError) {
-        throw new Error('Storage upload: ' + (uploadError.message || JSON.stringify(uploadError)))
-      }
+      if (uploadError) throw new Error(uploadError.message)
 
       const { error: dbError } = await supabase.from('voice_recordings').insert({
         user_id: user.id,
-        prompt_id: prompt.id,
+        prompt_id: trial.id,
         storage_path: fileName,
-        is_primary: currentPrompt === 0,
+        is_primary: savedCount === 0,
+        duration_seconds: seconds || null,
       })
+      if (dbError) throw new Error(dbError.message)
 
-      if (dbError) {
-        throw new Error('Database save: ' + dbError.message)
-      }
-
-      if (currentPrompt === 0) {
-        navigate('/worlds')
-      } else {
-        setCurrentPrompt(prev => prev + 1)
-        reRecord()
-      }
+      const count = savedCount + 1
+      setSavedCount(count)
+      goNext(count)
     } catch (err) {
-      console.error('Upload error:', err)
-      alert('Upload failed: ' + (err.message || JSON.stringify(err)))
+      alert('Could not save your voice: ' + err.message)
     } finally {
       setUploading(false)
     }
   }
 
   return (
-    <div className={`min-h-screen ${meta.bgClass} flex flex-col px-6 py-12 relative overflow-hidden`}>
-      <AmbientBackground world={world} />
+    <div className="min-h-screen bg-gradient-kingdom flex flex-col px-6 py-12 relative overflow-hidden">
+      <AmbientBackground world="kingdom" />
 
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col relative z-10">
-        {/* Header */}
-        <div className="mb-8">
-          <p className="text-kingdom-gold/50 text-sm tracking-[0.15em] uppercase mb-2 font-display">
-            {meta.emoji} {meta.name} — Quest {currentPrompt + 1} of {prompts.length}
-          </p>
-          <h1 className="font-display text-2xl font-bold text-shimmer mb-1">
-            Your Voice, Your Power
-          </h1>
-          <p className="text-white/35 text-sm">
-            Record your response to this quest prompt. This is how others will discover you.
-          </p>
+        {/* Progress: three trial dots */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          {trials.map((t, i) => (
+            <div key={t.id} className={`flex items-center justify-center w-10 h-10 rounded-full border text-lg transition-all
+              ${i === step ? 'border-kingdom-gold bg-kingdom-gold/15 scale-110'
+                : i < step ? 'border-kingdom-gold/40 bg-kingdom-gold/5 opacity-60'
+                : 'border-white/10 opacity-30'}`}>
+              {trialKinds[t.kind].emoji}
+            </div>
+          ))}
         </div>
 
-        {/* Narrator text */}
-        <div className="card-ornate mb-6">
-          <p className="text-kingdom-gold/40 text-xs uppercase tracking-[0.2em] mb-3 font-display">
-            The Narrator speaks...
+        <div className="text-center mb-6 animate-fade-in" key={trial.id}>
+          <p className="text-kingdom-gold/50 text-xs tracking-[0.3em] uppercase font-display mb-2">
+            Trial {step + 1} of 3 · {kind.label}
           </p>
-          <p className="text-white/50 text-sm italic leading-relaxed">
-            "{prompt.narrator}"
-          </p>
+          <p className="text-white/35 text-sm italic">{trial.narrator}</p>
         </div>
 
-        {/* Spoken name — first recording only */}
-        {currentPrompt === 0 && (
-          <div className="mb-4 px-4 py-3 rounded-xl border border-kingdom-gold/15 bg-kingdom-gold/5">
-            <p className="text-kingdom-gold/80 text-xs font-display leading-relaxed">
-              🎙️ Begin by speaking your name: <span className="text-white/70 italic">"I am …"</span>. In this realm, your name is heard, never written.
-            </p>
-          </div>
+        {/* The question */}
+        <div className="rounded-2xl p-6 mb-6 relative overflow-hidden animate-fade-in" key={trial.id + '-q'}
+             style={{
+               background: 'linear-gradient(145deg, rgba(212,168,67,0.08) 0%, rgba(212,168,67,0.02) 100%)',
+               border: '1px solid rgba(212,168,67,0.25)',
+               boxShadow: '0 0 40px rgba(212,168,67,0.06)',
+             }}>
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-kingdom-gold/40 to-transparent" />
+          <p className="text-white/90 text-lg leading-relaxed font-display text-center">{trial.text}</p>
+        </div>
+
+        {step === 0 && !audioUrl && (
+          <p className="text-kingdom-gold/60 text-xs text-center font-display mb-4">
+            🎙️ Start with your name: <span className="text-white/70 italic">"I am …"</span> Then answer. Be yourself — laugh, think, go wild.
+          </p>
         )}
 
-        {/* Quest prompt */}
-        <div className="rounded-2xl p-6 mb-8 relative overflow-hidden"
-             style={{
-               background: 'linear-gradient(145deg, rgba(212,168,67,0.06) 0%, rgba(212,168,67,0.02) 100%)',
-               border: '1px solid rgba(212,168,67,0.2)',
-               boxShadow: '0 0 40px rgba(212,168,67,0.05)',
-             }}>
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-kingdom-gold/30 to-transparent" />
-          <p className="text-kingdom-gold/90 text-base leading-relaxed font-display">
-            "{prompt.text}"
-          </p>
-        </div>
-
-        {/* Recording interface */}
+        {/* Recorder */}
         <div className="flex-1 flex flex-col items-center justify-center">
-          {!recorded ? (
+          {!audioUrl ? (
             <>
               <button
                 onClick={isRecording ? stopRecording : startRecording}
                 className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300
-                  ${isRecording
-                    ? 'bg-red-500 scale-110 pulse-ring'
-                    : 'bg-gradient-gold hover:scale-105 glow-gold'
-                  }`}
+                  ${isRecording ? 'bg-red-500 scale-110 pulse-ring' : 'bg-gradient-gold hover:scale-105 glow-gold'}`}
               >
                 {isRecording ? (
                   <div className="w-8 h-8 bg-white rounded-sm" />
@@ -223,19 +175,14 @@ export default function VoiceRecord() {
                   </svg>
                 )}
               </button>
-
-              <p className="text-white/35 text-sm mt-4">
-                {isRecording ? '✦ Recording... Tap to stop' : 'Tap to start recording'}
+              <p className="text-white/40 text-sm mt-4 font-display">
+                {isRecording ? `Speaking… ${seconds}s / ${MAX_SECONDS}s · tap to stop` : 'Tap and speak your answer'}
               </p>
-
               {isRecording && (
                 <div className="flex gap-1 mt-4 items-end h-6">
                   {[...Array(12)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="w-1 bg-kingdom-gold rounded-full waveform-bar"
-                      style={{ animationDelay: `${i * 0.1}s`, height: '4px' }}
-                    />
+                    <div key={i} className="w-1 bg-kingdom-gold rounded-full waveform-bar"
+                         style={{ animationDelay: `${i * 0.1}s`, height: '4px' }} />
                   ))}
                 </div>
               )}
@@ -245,30 +192,24 @@ export default function VoiceRecord() {
               <div className="w-full card-ornate mb-6">
                 <audio src={audioUrl} controls className="w-full" />
               </div>
-
               <div className="flex gap-3 w-full">
-                <button onClick={reRecord} className="btn-outline flex-1">
-                  Re-record
-                </button>
-                <button
-                  onClick={uploadAndContinue}
-                  disabled={uploading}
-                  className="btn-gold flex-1 disabled:opacity-50"
-                >
-                  {uploading ? 'Uploading...' : 'Continue →'}
+                <button onClick={reRecord} className="btn-outline flex-1">Try again</button>
+                <button onClick={saveAndContinue} disabled={uploading} className="btn-gold flex-1 disabled:opacity-50">
+                  {uploading ? 'Sealing…' : step < 2 ? 'Next trial →' : 'Enter the realm →'}
                 </button>
               </div>
             </>
           )}
         </div>
 
-        {/* Skip option */}
-        <button
-          onClick={() => navigate('/worlds')}
-          className="text-white/20 text-sm text-center mt-6 hover:text-white/40 transition-colors"
-        >
-          Skip for now
-        </button>
+        {!isRecording && !audioUrl && (
+          <button
+            onClick={reroll}
+            className="text-white/25 text-sm text-center mt-6 hover:text-white/50 transition-colors"
+          >
+            Give me a different question
+          </button>
+        )}
       </div>
     </div>
   )

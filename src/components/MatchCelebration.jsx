@@ -23,7 +23,7 @@ export default function MatchCelebration({ matchData, onClose }) {
       healer: { emoji: '✨', name: 'The Healer' },
       wildcard: { emoji: '🃏', name: 'The Wildcard' },
     }
-    return map[archetype] || { emoji: '❓', name: 'Unknown' }
+    return map[archetype] || { emoji: '🔮', name: 'Your masks have fallen' }
   }
 
   const otherUser = matchData?.otherUser

@@ -28,7 +28,7 @@ export default function Likes() {
         .select(`
           id, created_at,
           liker:profiles!likes_liker_id_fkey (
-            id, name, age, archetype,
+            id, name, archetype,
             voice_recordings ( id, storage_path, is_primary )
           )
         `)
@@ -114,7 +114,7 @@ export default function Likes() {
       protector: '🛡️', genius: '🧠', rebel: '⚡', romantic: '🌹',
       commander: '👑', adventurer: '🗺️', healer: '✨', wildcard: '🃏',
     }
-    return map[archetype] || '❓'
+    return map[archetype] || '🔮'
   }
 
   if (loading) {

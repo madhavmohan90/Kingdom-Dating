@@ -41,7 +41,7 @@ export default function Chats() {
       protector: '🛡️', genius: '🧠', rebel: '⚡', romantic: '🌹',
       commander: '👑', adventurer: '🗺️', healer: '✨', wildcard: '🃏',
     }
-    return map[archetype] || '❓'
+    return map[archetype] || '🔮'
   }
 
   if (loading) {

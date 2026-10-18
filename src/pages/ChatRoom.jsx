@@ -192,7 +192,7 @@ export default function ChatRoom() {
       protector: '🛡️', genius: '🧠', rebel: '⚡', romantic: '🌹',
       commander: '👑', adventurer: '🗺️', healer: '✨', wildcard: '🃏',
     }
-    return map[archetype] || '❓'
+    return map[archetype] || '🔮'
   }
 
   const formatTime = (timestamp) => {

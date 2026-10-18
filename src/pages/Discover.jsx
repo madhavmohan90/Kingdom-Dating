@@ -2,12 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import MatchCelebration from '../components/MatchCelebration'
 import AmbientBackground from '../components/AmbientBackground'
-import { worldMeta } from '../data/prompts'
+import { worldMeta, questById, trialKinds } from '../data/prompts'
 
 export default function Discover() {
   const [profiles, setProfiles] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
+  const [playingPath, setPlayingPath] = useState(null)
+  const isPlaying = playingPath !== null
+  const setIsPlaying = v => { if (!v) setPlayingPath(null) }
   const [loading, setLoading] = useState(true)
   const [audioLoading, setAudioLoading] = useState(false)
   const [matchData, setMatchData] = useState(null)
@@ -53,7 +55,7 @@ export default function Discover() {
       let query = supabase
         .from('profiles')
         .select(`
-          id, name, age, archetype, selected_world,
+          id, name, archetype, selected_world,
           voice_recordings ( id, prompt_id, storage_path, is_primary, duration_seconds )
         `)
         .eq('gender', oppositeGender)
@@ -83,31 +85,26 @@ export default function Discover() {
 
   const playAudio = async (storagePath) => {
     try {
+      const wasPlaying = playingPath
       if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current = null
-        if (isPlaying) {
-          setIsPlaying(false)
-          return
-        }
+        setPlayingPath(null)
+        if (wasPlaying === storagePath) return
       }
 
-      setAudioLoading(true)
-
+      setAudioLoading(storagePath)
       const { data, error } = await supabase.storage
         .from('voice-recordings')
         .createSignedUrl(storagePath, 300)
-
       if (error) throw error
 
       const audio = new Audio(data.signedUrl)
       audioRef.current = audio
-
-      audio.onended = () => setIsPlaying(false)
-      audio.oncanplay = () => setAudioLoading(false)
-
+      audio.onended = () => setPlayingPath(null)
       await audio.play()
-      setIsPlaying(true)
+      setAudioLoading(false)
+      setPlayingPath(storagePath)
     } catch (err) {
       console.error('Error playing audio:', err)
       setAudioLoading(false)
@@ -221,7 +218,7 @@ export default function Discover() {
             The Realm Awaits
           </h2>
           <p className="text-white/40 text-sm max-w-xs leading-relaxed">
-            No new voices in your world right now. Check back soon — new quests arrive daily.
+            No new voices right now. New souls arrive every day — come back soon.
           </p>
           <div className="divider-ornate mt-8 max-w-[200px] mx-auto">✦</div>
         </div>
@@ -229,9 +226,12 @@ export default function Discover() {
     )
   }
 
-  const archetype = getArchetypeDisplay(currentProfile.archetype)
-  const primaryRecording = currentProfile.voice_recordings?.find(r => r.is_primary)
-    || currentProfile.voice_recordings?.[0]
+  // Newest answer per question, at most three
+  const seen = new Set()
+  const recordings = [...(currentProfile.voice_recordings || [])]
+    .sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
+    .filter(r => !seen.has(r.prompt_id) && seen.add(r.prompt_id))
+    .slice(0, 3)
 
   return (
     <div className={`min-h-screen ${meta.bgClass} px-6 pt-12 pb-24 relative overflow-hidden`}>
@@ -260,68 +260,43 @@ export default function Discover() {
             opacity: swiping ? Math.max(0.5, 1 - Math.abs(swipeOffset) / 300) : 1,
           }}
         >
-          {/* Archetype badge */}
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-12 h-12 rounded-full bg-kingdom-gold/10 border border-kingdom-gold/20 flex items-center justify-center">
-              <span className="text-2xl">{archetype.emoji}</span>
-            </div>
-            <div>
-              <p className="text-kingdom-gold/90 font-display text-sm tracking-wide">{archetype.name}</p>
-              <p className="text-white/40 text-xs">{currentProfile.name}</p>
-            </div>
+          {/* Who */}
+          <div className="text-center mb-5">
+            <p className="text-kingdom-gold/40 text-[10px] tracking-[0.3em] uppercase font-display mb-1">A voice in the dark</p>
+            <p className="font-display text-xl text-shimmer">{currentProfile.name}</p>
           </div>
 
-          {/* Audio player area */}
-          <div className="rounded-xl p-6 mb-6 flex flex-col items-center"
-               style={{
-                 background: 'linear-gradient(145deg, rgba(212,168,67,0.04) 0%, rgba(255,255,255,0.02) 100%)',
-                 border: '1px solid rgba(212,168,67,0.08)',
-               }}>
-            {primaryRecording ? (
-              <>
+          {/* Their trials */}
+          <div className="space-y-3 mb-6">
+            {recordings.map(rec => {
+              const q = questById[rec.prompt_id]
+              const playing = playingPath === rec.storage_path
+              return (
                 <button
-                  onClick={() => playAudio(primaryRecording.storage_path)}
-                  disabled={audioLoading}
-                  className={`w-16 h-16 rounded-full bg-gradient-gold flex items-center justify-center mb-4 transition-all duration-300 disabled:opacity-50 ${
-                    isPlaying ? 'pulse-ring scale-105' : 'hover:scale-105 glow-gold'
-                  }`}
+                  key={rec.id}
+                  onClick={() => playAudio(rec.storage_path)}
+                  className={`w-full text-left rounded-xl p-4 flex items-start gap-3 transition-all border
+                    ${playing ? 'bg-kingdom-gold/10 border-kingdom-gold/30' : 'bg-white/3 border-kingdom-gold/8 hover:border-kingdom-gold/20'}`}
                 >
-                  {audioLoading ? (
-                    <div className="w-5 h-5 border-2 border-kingdom-darker border-t-transparent rounded-full animate-spin" />
-                  ) : isPlaying ? (
-                    <svg className="w-6 h-6 text-kingdom-darker" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-                    </svg>
-                  ) : (
-                    <svg className="w-6 h-6 text-kingdom-darker ml-1" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                  )}
+                  <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-all
+                    ${playing ? 'bg-gradient-gold pulse-ring' : 'bg-gradient-gold glow-gold opacity-90'}`}>
+                    {audioLoading === rec.storage_path ? (
+                      <div className="w-4 h-4 border-2 border-kingdom-darker border-t-transparent rounded-full animate-spin" />
+                    ) : playing ? (
+                      <svg className="w-4 h-4 text-kingdom-darker" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+                    ) : (
+                      <svg className="w-4 h-4 text-kingdom-darker ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-kingdom-gold/50 text-[10px] uppercase tracking-[0.2em] font-display mb-1">
+                      {q ? `${trialKinds[q.kind].emoji} ${trialKinds[q.kind].label}` : '✦ Their voice'}
+                    </p>
+                    <p className="text-white/70 text-sm leading-snug">{q ? q.text : 'Tap to listen'}</p>
+                  </div>
                 </button>
-
-                {/* Waveform visualization */}
-                <div className="flex gap-1 items-end h-8">
-                  {[...Array(20)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={`w-1 rounded-full transition-all duration-300 ${
-                        isPlaying ? 'bg-kingdom-gold waveform-bar' : 'bg-white/15'
-                      }`}
-                      style={{
-                        height: isPlaying ? undefined : `${4 + Math.random() * 20}px`,
-                        animationDelay: `${i * 0.08}s`
-                      }}
-                    />
-                  ))}
-                </div>
-
-                <p className="text-white/25 text-xs mt-3">
-                  {isPlaying ? '✦ Listening...' : 'Tap to hear their quest response'}
-                </p>
-              </>
-            ) : (
-              <p className="text-white/30 text-sm py-4">No voice recording yet</p>
-            )}
+              )
+            })}
           </div>
 
           {/* Action buttons */}
@@ -336,7 +311,7 @@ export default function Discover() {
               onClick={handleLike}
               className="flex-1 btn-gold text-sm"
             >
-              ♥ Like Voice
+              ♥ I like this voice
             </button>
           </div>
         </div>

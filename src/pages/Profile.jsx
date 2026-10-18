@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { worldMeta } from '../data/prompts'
+import { worldMeta, questById, trialKinds } from '../data/prompts'
 import AmbientBackground from '../components/AmbientBackground'
 
 export default function Profile() {
@@ -101,7 +101,7 @@ export default function Profile() {
       healer: { emoji: '✨', name: 'The Healer', title: 'Mender of Souls' },
       wildcard: { emoji: '🃏', name: 'The Wildcard', title: 'Trickster of the Court' },
     }
-    return map[archetype] || { emoji: '❓', name: 'Unknown', title: '' }
+    return map[archetype] || { emoji: '🔮', name: 'Your Legend', title: 'A voice in the realm' }
   }
 
   if (loading) {
@@ -179,9 +179,9 @@ export default function Profile() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white/70 text-sm truncate">{rec.prompt_id}</p>
+                    <p className="text-white/70 text-sm truncate">{questById[rec.prompt_id]?.text || rec.prompt_id}</p>
                     <p className="text-white/30 text-xs">
-                      {rec.is_primary ? '★ Primary' : 'Quest response'}
+                      {questById[rec.prompt_id] ? trialKinds[questById[rec.prompt_id].kind].label : 'Your voice'}
                     </p>
                   </div>
                 </button>
@@ -193,7 +193,7 @@ export default function Profile() {
             onClick={() => navigate('/voice-record')}
             className="w-full py-3 rounded-xl border border-dashed border-kingdom-gold/15 text-kingdom-gold/40 text-sm hover:border-kingdom-gold/30 hover:text-kingdom-gold/60 transition-all"
           >
-            + Record a new quest response
+            + Answer new trials
           </button>
         </div>
 
@@ -238,7 +238,7 @@ export default function Profile() {
           <div className="space-y-1">
             {[
               { label: 'Edit Your Legend', path: '/edit-profile' },
-              { label: 'Retake Quiz', path: '/quiz' },
+              { label: 'Answer new trials', path: '/voice-record' },
             ].map(item => (
               <button
                 key={item.path}

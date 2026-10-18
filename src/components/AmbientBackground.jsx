@@ -12,6 +12,20 @@ export default function AmbientBackground({ world = 'kingdom' }) {
     }))
   }, [])
 
+  // Faint fantasy creatures drifting across the night sky
+  const creatures = useMemo(() => {
+    const set = ['🐉', '🦇', '🧹', '🦇', '🔮', '🌙']
+    return set.map((emoji, i) => ({
+      id: i,
+      emoji,
+      top: `${8 + Math.random() * 70}%`,
+      size: emoji === '🐉' ? 34 : 18 + Math.random() * 8,
+      duration: 28 + Math.random() * 24,
+      delay: -Math.random() * 40,
+      reverse: i % 2 === 1,
+    }))
+  }, [])
+
   const colors = {
     kingdom: { glow1: 'rgba(45,27,105,0.2)', glow2: 'rgba(139,26,61,0.1)', particle: 'rgba(212,168,67,0.5)' },
     cosmos: { glow1: 'rgba(13,27,62,0.25)', glow2: 'rgba(26,13,74,0.15)', particle: 'rgba(147,197,253,0.5)' },
@@ -47,6 +61,25 @@ export default function AmbientBackground({ world = 'kingdom' }) {
           animationDelay: '1.5s',
         }}
       />
+
+      {/* Drifting creatures */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
+        {creatures.map(c => (
+          <span
+            key={c.id}
+            className="creature"
+            style={{
+              top: c.top,
+              fontSize: `${c.size}px`,
+              animationDuration: `${c.duration}s`,
+              animationDelay: `${c.delay}s`,
+              animationDirection: c.reverse ? 'reverse' : 'normal',
+            }}
+          >
+            {c.emoji}
+          </span>
+        ))}
+      </div>
 
       {/* Floating particles */}
       <div className="particles">

@@ -2,21 +2,20 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import AmbientBackground from '../components/AmbientBackground'
+import { generateAlias } from '../data/aliases'
 
 const paths = [
   {
-    id: 'female',
-    emoji: '🕯️',
-    name: 'The Seeker',
-    line: 'I came to listen.',
-    desc: 'Wander the realm and hear the voices that call to you.',
+    id: 'male',
+    emoji: '⚔️',
+    name: 'A King',
+    desc: 'I am a man.',
   },
   {
-    id: 'male',
-    emoji: '🎙️',
-    name: 'The Bard',
-    line: 'I came to be heard.',
-    desc: 'Answer the quests with your voice and let them find you.',
+    id: 'female',
+    emoji: '🌙',
+    name: 'A Queen',
+    desc: 'I am a woman.',
   },
 ]
 
@@ -43,12 +42,13 @@ export default function Gate() {
       const { error: profileError } = await supabase.from('profiles').upsert({
         id: session.user.id,
         gender: path,
+        name: generateAlias(path),
         selected_world: 'kingdom',
         oath_taken_at: new Date().toISOString(),
       })
       if (profileError) throw profileError
 
-      navigate('/quiz')
+      navigate('/voice-record')
     } catch (err) {
       setError(err.message || 'The gate would not open. Try again.')
       setLoading(false)
@@ -70,10 +70,10 @@ export default function Gate() {
         <div className="text-center mb-8">
           <p className="text-kingdom-gold/40 text-xs tracking-[0.3em] uppercase font-display mb-3">✦ The Gate ✦</p>
           <h1 className="font-display text-3xl font-bold text-shimmer mb-3">Who approaches?</h1>
-          <p className="text-white/40 text-sm">Choose your path through the realm.</p>
+          <p className="text-white/40 text-sm">Answer three trials with your voice. Then listen to theirs.</p>
         </div>
 
-        <div className="space-y-3 mb-8">
+        <div className="grid grid-cols-2 gap-3 mb-8">
           {paths.map(p => (
             <button
               key={p.id}
@@ -86,13 +86,10 @@ export default function Gate() {
               {path === p.id && (
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-kingdom-gold/50 to-transparent" />
               )}
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col items-center text-center gap-2">
                 <span className="text-4xl">{p.emoji}</span>
-                <div>
-                  <p className="font-display text-lg text-white">{p.name}</p>
-                  <p className="text-kingdom-gold/70 text-sm italic font-display">{p.line}</p>
-                  <p className="text-white/35 text-xs mt-1">{p.desc}</p>
-                </div>
+                <p className="font-display text-lg text-white">{p.name}</p>
+                <p className="text-white/35 text-xs">{p.desc}</p>
               </div>
             </button>
           ))}
@@ -128,7 +125,7 @@ export default function Gate() {
         </button>
         {(!path || !sworn) && (
           <p className="text-kingdom-gold/50 text-xs text-center mt-3 font-display">
-            {!path ? 'Choose your path above.' : 'Tap the oath above to proceed.'}
+            {!path ? 'Choose King or Queen above.' : 'Tap the oath above to proceed.'}
           </p>
         )}
       </div>

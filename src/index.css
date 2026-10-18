@@ -184,3 +184,24 @@
   mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
 }
+
+/* Fantasy creatures drifting across the sky */
+.creature {
+  position: absolute;
+  left: -10%;
+  opacity: 0.12;
+  filter: grayscale(0.4) drop-shadow(0 0 6px rgba(212, 168, 67, 0.3));
+  animation-name: creature-fly;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes creature-fly {
+  0%   { transform: translateX(0) translateY(0); }
+  25%  { transform: translateX(30vw) translateY(-14px); }
+  50%  { transform: translateX(60vw) translateY(8px); }
+  75%  { transform: translateX(90vw) translateY(-10px); }
+  100% { transform: translateX(120vw) translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .creature { animation: none; display: none; }
+}

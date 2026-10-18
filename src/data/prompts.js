@@ -1,5 +1,45 @@
-// Quest voice prompts organized by world
-// Each world has its own atmosphere and quest style
+// ─── The Three Trials ────────────────────────────────────────────────
+// Everyone (men and women) answers three trials out loud: one dramatic,
+// one sacrifice, one funny. Others listen to HOW you answer.
+
+export const trialKinds = {
+  drama: { label: 'Trial of Courage', emoji: '🐉' },
+  sacrifice: { label: 'Trial of the Heart', emoji: '🩸' },
+  funny: { label: 'Trial of Mischief', emoji: '🧹' },
+}
+
+export const questPool = [
+  // Drama — danger, action, protect
+  { id: 'q-dragon', kind: 'drama', text: 'A dragon lands in front of your partner in the jungle. You have 30 seconds. No weapons. What do you do?', narrator: 'The ground shakes. Fire glows in its throat.' },
+  { id: 'q-ship', kind: 'drama', text: "You're both on a sinking ghost ship. One rope, one way out. Who climbs first, and what do you shout?", narrator: 'Cold water rushes in. The ghosts are laughing.' },
+  { id: 'q-army', kind: 'drama', text: 'A dark army is at the gates. You can save your village or the one you love. Make the call.', narrator: 'Drums in the distance. Torches everywhere.' },
+  { id: 'q-masked', kind: 'drama', text: "At a masked ball, a stranger whispers: 'Someone here wants to kill you.' What's your next move?", narrator: 'Music plays. Every face is hidden.' },
+
+  // Sacrifice — love, loss, deep choices
+  { id: 'q-vampire', kind: 'sacrifice', text: 'A vampire needs blood to rise. Yours or your loved one\'s. One of you walks free. What do you tell the vampire?', narrator: 'Its eyes glow red. It is waiting for your answer.' },
+  { id: 'q-witch', kind: 'sacrifice', text: 'A witch can bring back someone you lost. The price: you forget the person you love today. Do you take the deal?', narrator: 'The cauldron bubbles. She smiles.' },
+  { id: 'q-forever', kind: 'sacrifice', text: 'Live forever, but alone. Or live one year with your soulmate. Which one, and why?', narrator: 'Two candles burn. You may keep only one.' },
+  { id: 'q-memory', kind: 'sacrifice', text: "A curse will erase your partner's memory of you at sunrise. You have one night. What do you do?", narrator: 'The moon is high. Sunrise is coming.' },
+
+  // Funny — light, playful
+  { id: 'q-frog', kind: 'funny', text: 'You kiss a frog and it turns into your ex. What is the first thing you say?', narrator: 'Poof. Smoke. Oh no.' },
+  { id: 'q-cat', kind: 'funny', text: 'You accidentally turned your date into a cat for a week. Explain it to them.', narrator: 'Meow. They do not look happy.' },
+  { id: 'q-potion', kind: 'funny', text: 'A truth potion hits you on your first date. What is the most dangerous thing that comes out of your mouth?', narrator: 'Your lips start moving on their own…' },
+  { id: 'q-genie', kind: 'funny', text: 'A genie gives you three wishes, but your date hears every one. What is wish number one?', narrator: 'The lamp glows. Your date is listening.' },
+  { id: 'q-broom', kind: 'funny', text: "Your flying broom breaks down mid-air on a date. What's your excuse?", narrator: 'Sputter. Sputter. Falling.' },
+]
+
+export const questById = Object.fromEntries(questPool.map(q => [q.id, q]))
+
+// One random trial from each kind: drama, sacrifice, funny.
+export function pickTrials() {
+  return ['drama', 'sacrifice', 'funny'].map(kind => {
+    const pool = questPool.filter(q => q.kind === kind)
+    return pool[Math.floor(Math.random() * pool.length)]
+  })
+}
+
+// Older world prompts (kept so old recordings still show their question)
 
 export const worldPrompts = {
   kingdom: [
