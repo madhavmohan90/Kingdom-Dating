@@ -6,6 +6,7 @@ export const trialKinds = {
   drama: { label: 'Trial of Courage', emoji: '🐉' },
   sacrifice: { label: 'Trial of the Heart', emoji: '🩸' },
   funny: { label: 'Trial of Mischief', emoji: '🧹' },
+  legacy: { label: 'Old Quest', emoji: '📜' },
 }
 
 export const questPool = [
@@ -169,3 +170,8 @@ export const worldMeta = {
     bgClass: 'bg-gradient-shadows',
   },
 }
+
+// Recordings made before the three trials existed still show their question.
+Object.values(worldPrompts).flat().forEach(q => {
+  if (!questById[q.id]) questById[q.id] = { ...q, kind: 'legacy' }
+})
