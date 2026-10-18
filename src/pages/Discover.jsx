@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 export default function Discover() {
@@ -6,9 +6,17 @@ export default function Discover() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [audioLoading, setAudioLoading] = useState(false)
+  const audioRef = useRef(null)
 
   useEffect(() => {
     loadProfiles()
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+    }
   }, [])
 
   const loadProfiles = async () => {
@@ -16,7 +24,6 @@ export default function Discover() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Get user's gender to show opposite gender
       const { data: myProfile } = await supabase
         .from('profiles')
         .select('gender, selected_world')
@@ -27,18 +34,37 @@ export default function Discover() {
 
       const oppositeGender = myProfile.gender === 'female' ? 'male' : 'female'
 
-      // Fetch profiles with voice recordings
-      const { data } = await supabase
+      // Get profiles user hasn't liked/skipped yet
+      const { data: existingLikes } = await supabase
+        .from('likes')
+        .select('liked_id')
+        .eq('liker_id', user.id)
+
+      const likedIds = (existingLikes || []).map(l => l.liked_id)
+
+      let query = supabase
         .from('profiles')
         .select(`
           id, name, age, archetype, selected_world,
-          voice_recordings ( id, prompt_id, storage_path, is_primary )
+          voice_recordings ( id, prompt_id, storage_path, is_primary, duration_seconds )
         `)
         .eq('gender', oppositeGender)
         .eq('selected_world', myProfile.selected_world || 'kingdom')
+        .neq('id', user.id)
         .limit(20)
 
-      setProfiles(data || [])
+      if (likedIds.length > 0) {
+        query = query.not('id', 'in', `(${likedIds.join(',')})`)
+      }
+
+      const { data } = await query
+
+      // Only show profiles that have at least one voice recording
+      const withRecordings = (data || []).filter(
+        p => p.voice_recordings && p.voice_recordings.length > 0
+      )
+
+      setProfiles(withRecordings)
     } catch (err) {
       console.error('Error loading profiles:', err)
     } finally {
@@ -48,8 +74,55 @@ export default function Discover() {
 
   const currentProfile = profiles[currentIndex]
 
+  const playAudio = async (storagePath) => {
+    try {
+      // Stop current audio
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+        if (isPlaying) {
+          setIsPlaying(false)
+          return
+        }
+      }
+
+      setAudioLoading(true)
+
+      // Get signed URL from Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('voice-recordings')
+        .createSignedUrl(storagePath, 300) // 5 min expiry
+
+      if (error) throw error
+
+      const audio = new Audio(data.signedUrl)
+      audioRef.current = audio
+
+      audio.onended = () => {
+        setIsPlaying(false)
+      }
+
+      audio.oncanplay = () => {
+        setAudioLoading(false)
+      }
+
+      await audio.play()
+      setIsPlaying(true)
+    } catch (err) {
+      console.error('Error playing audio:', err)
+      setAudioLoading(false)
+    }
+  }
+
   const handleLike = async () => {
     if (!currentProfile) return
+
+    // Stop any playing audio
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+      setIsPlaying(false)
+    }
 
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
@@ -63,6 +136,11 @@ export default function Discover() {
   }
 
   const handleSkip = () => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+      setIsPlaying(false)
+    }
     nextProfile()
   }
 
@@ -70,6 +148,8 @@ export default function Discover() {
     if (currentIndex < profiles.length - 1) {
       setCurrentIndex(prev => prev + 1)
       setIsPlaying(false)
+    } else {
+      setCurrentIndex(profiles.length) // triggers "no more" state
     }
   }
 
@@ -113,6 +193,7 @@ export default function Discover() {
 
   const archetype = getArchetypeDisplay(currentProfile.archetype)
   const primaryRecording = currentProfile.voice_recordings?.find(r => r.is_primary)
+    || currentProfile.voice_recordings?.[0]
 
   return (
     <div className="min-h-screen bg-gradient-kingdom px-6 pt-12 pb-24">
@@ -142,10 +223,13 @@ export default function Discover() {
             {primaryRecording ? (
               <>
                 <button
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className="w-16 h-16 rounded-full bg-kingdom-gold flex items-center justify-center mb-4 hover:scale-105 transition-transform"
+                  onClick={() => playAudio(primaryRecording.storage_path)}
+                  disabled={audioLoading}
+                  className="w-16 h-16 rounded-full bg-kingdom-gold flex items-center justify-center mb-4 hover:scale-105 transition-transform disabled:opacity-50"
                 >
-                  {isPlaying ? (
+                  {audioLoading ? (
+                    <div className="w-5 h-5 border-2 border-kingdom-darker border-t-transparent rounded-full animate-spin" />
+                  ) : isPlaying ? (
                     <svg className="w-6 h-6 text-kingdom-darker" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
                     </svg>
@@ -173,7 +257,7 @@ export default function Discover() {
                 </div>
 
                 <p className="text-white/30 text-xs mt-3">
-                  Listen to their quest response
+                  {isPlaying ? 'Playing...' : 'Tap to listen to their quest response'}
                 </p>
               </>
             ) : (
@@ -195,7 +279,7 @@ export default function Discover() {
               onClick={handleLike}
               className="flex-1 btn-gold text-sm"
             >
-              💛 Like Voice
+              Like Voice
             </button>
           </div>
         </div>

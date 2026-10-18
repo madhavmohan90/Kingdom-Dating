@@ -1,24 +1,34 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 export default function Likes() {
   const [likes, setLikes] = useState([])
   const [loading, setLoading] = useState(true)
+  const [playingId, setPlayingId] = useState(null)
+  const [userId, setUserId] = useState(null)
+  const audioRef = useRef(null)
 
   useEffect(() => {
     loadLikes()
+    return () => {
+      if (audioRef.current) audioRef.current.pause()
+    }
   }, [])
 
   const loadLikes = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      setUserId(user.id)
 
       const { data } = await supabase
         .from('likes')
         .select(`
           id, created_at,
-          liker:profiles!likes_liker_id_fkey ( id, name, age, archetype )
+          liker:profiles!likes_liker_id_fkey (
+            id, name, age, archetype,
+            voice_recordings ( id, storage_path, is_primary )
+          )
         `)
         .eq('liked_id', user.id)
         .order('created_at', { ascending: false })
@@ -28,6 +38,59 @@ export default function Likes() {
       console.error('Error loading likes:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const playVoice = async (like) => {
+    try {
+      const recording = like.liker?.voice_recordings?.find(r => r.is_primary)
+        || like.liker?.voice_recordings?.[0]
+
+      if (!recording) return
+
+      // Toggle off if already playing
+      if (audioRef.current && playingId === like.id) {
+        audioRef.current.pause()
+        audioRef.current = null
+        setPlayingId(null)
+        return
+      }
+
+      // Stop previous
+      if (audioRef.current) {
+        audioRef.current.pause()
+      }
+
+      const { data, error } = await supabase.storage
+        .from('voice-recordings')
+        .createSignedUrl(recording.storage_path, 300)
+
+      if (error) throw error
+
+      const audio = new Audio(data.signedUrl)
+      audioRef.current = audio
+      audio.onended = () => setPlayingId(null)
+      await audio.play()
+      setPlayingId(like.id)
+    } catch (err) {
+      console.error('Error playing voice:', err)
+    }
+  }
+
+  const handleLikeBack = async (likedUserId) => {
+    if (!userId) return
+    try {
+      await supabase.from('likes').insert({
+        liker_id: userId,
+        liked_id: likedUserId,
+      })
+      // The auto-match trigger will create a match if mutual
+      alert('You liked them back! Check your Chats if it\'s a match.')
+    } catch (err) {
+      // Might already exist
+      if (err.code === '23505') {
+        alert('You already liked this person!')
+      }
     }
   }
 
@@ -66,24 +129,61 @@ export default function Likes() {
           </div>
         ) : (
           <div className="space-y-3">
-            {likes.map(like => (
-              <div key={like.id} className="card-dark flex items-center gap-4">
-                <span className="text-2xl">
-                  {getArchetypeEmoji(like.liker?.archetype)}
-                </span>
-                <div className="flex-1">
-                  <p className="text-white font-medium text-sm">
-                    {like.liker?.name}, {like.liker?.age}
-                  </p>
-                  <p className="text-white/40 text-xs">
-                    Liked your voice
-                  </p>
+            {likes.map(like => {
+              const hasRecording = like.liker?.voice_recordings?.length > 0
+              return (
+                <div key={like.id} className="card-dark">
+                  <div className="flex items-center gap-4 mb-3">
+                    <span className="text-2xl">
+                      {getArchetypeEmoji(like.liker?.archetype)}
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-white font-medium text-sm">
+                        {like.liker?.name}, {like.liker?.age}
+                      </p>
+                      <p className="text-white/40 text-xs">
+                        Liked your voice
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {hasRecording && (
+                      <button
+                        onClick={() => playVoice(like)}
+                        className={`flex-1 text-xs px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
+                          playingId === like.id
+                            ? 'bg-kingdom-gold/20 text-kingdom-gold border border-kingdom-gold/30'
+                            : 'bg-white/5 text-white/50 hover:bg-white/10 border border-white/10'
+                        }`}
+                      >
+                        {playingId === like.id ? (
+                          <>
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                            </svg>
+                            Playing...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                            Listen
+                          </>
+                        )}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleLikeBack(like.liker?.id)}
+                      className="flex-1 btn-gold text-xs py-2"
+                    >
+                      Like Back
+                    </button>
+                  </div>
                 </div>
-                <button className="bg-kingdom-gold/10 text-kingdom-gold text-xs px-3 py-1.5 rounded-lg hover:bg-kingdom-gold/20 transition-colors">
-                  Listen
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

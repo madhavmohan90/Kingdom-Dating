@@ -13,6 +13,7 @@ import Discover from './pages/Discover'
 import Likes from './pages/Likes'
 import Chats from './pages/Chats'
 import Profile from './pages/Profile'
+import ChatRoom from './pages/ChatRoom'
 
 // Components
 import BottomNav from './components/BottomNav'
@@ -56,6 +57,9 @@ function App() {
         <Route path="/archetype" element={<ArchetypeReveal />} />
         <Route path="/world-select" element={<WorldSelect />} />
         <Route path="/voice-record" element={<VoiceRecord />} />
+
+        {/* Chat room (no bottom nav) */}
+        <Route path="/chat/:matchId" element={<ChatRoom />} />
 
         {/* Main app routes (with bottom nav) */}
         <Route path="/worlds" element={<><Discover /><BottomNav active="worlds" /></>} />

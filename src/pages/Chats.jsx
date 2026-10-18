@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 export default function Chats() {
+  const navigate = useNavigate()
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState(null)
 
   useEffect(() => {
     loadMatches()
@@ -13,8 +16,8 @@ export default function Chats() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      setUserId(user.id)
 
-      // Find mutual likes (matches)
       const { data } = await supabase
         .from('matches')
         .select(`
@@ -72,12 +75,13 @@ export default function Chats() {
         ) : (
           <div className="space-y-3">
             {matches.map(match => {
-              const otherUser = match.user1?.id === match.user1?.id
+              const otherUser = match.user1?.id === userId
                 ? match.user2
                 : match.user1
               return (
                 <button
                   key={match.id}
+                  onClick={() => navigate(`/chat/${match.id}`)}
                   className="w-full card-dark flex items-center gap-4 hover:border-kingdom-gold/20 transition-colors"
                 >
                   <span className="text-2xl">
@@ -91,7 +95,9 @@ export default function Chats() {
                       Tap to send a voice note
                     </p>
                   </div>
-                  <div className="w-2 h-2 bg-kingdom-gold rounded-full" />
+                  <svg className="w-4 h-4 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
               )
             })}
