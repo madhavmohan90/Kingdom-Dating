@@ -234,7 +234,7 @@ export default function Discover() {
       <div className={`min-h-screen ${meta.bgClass} flex flex-col items-center justify-center px-6 pb-20 text-center`}>
         <div className="text-5xl mb-4">{meta.emoji}</div>
         <h2 className="font-display text-2xl text-kingdom-gold mb-3">
-          {meta.name} Awaits
+          The Realm Awaits
         </h2>
         <p className="text-white/50 text-sm max-w-xs">
           No new voices in your world right now. Check back soon — new quests arrive daily.
