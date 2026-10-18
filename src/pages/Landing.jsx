@@ -41,13 +41,13 @@ export default function Landing() {
           Fall for a voice. Not a face.
         </p>
         <p className="text-white/40 text-sm mb-12 max-w-xs mx-auto leading-relaxed">
-          Enter fantasy worlds. Complete quests. Discover voices that move your soul.
+          No forms. No photos. Step through the gate, answer the Oracle, and let your voice find its match.
         </p>
 
         {/* CTA Buttons */}
         <div className="space-y-4 w-full">
           <button
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate('/gate')}
             className="btn-gold w-full text-lg glow-gold relative overflow-hidden group"
           >
             <span className="relative z-10">Enter the Kingdom</span>
@@ -59,7 +59,7 @@ export default function Landing() {
             onClick={() => navigate('/signup?mode=login')}
             className="btn-outline w-full"
           >
-            I already have an account
+            Return to your realm
           </button>
         </div>
 

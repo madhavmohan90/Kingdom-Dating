@@ -267,7 +267,7 @@ export default function Discover() {
             </div>
             <div>
               <p className="text-kingdom-gold/90 font-display text-sm tracking-wide">{archetype.name}</p>
-              <p className="text-white/40 text-xs">{currentProfile.name}, {currentProfile.age}</p>
+              <p className="text-white/40 text-xs">{currentProfile.name}</p>
             </div>
           </div>
 

@@ -11,6 +11,11 @@ export default function Profile() {
   const [loading, setLoading] = useState(true)
   const [playingId, setPlayingId] = useState(null)
   const audioRef = useRef(null)
+  const [isAnonymous, setIsAnonymous] = useState(false)
+  const [sealEmail, setSealEmail] = useState('')
+  const [sealPassword, setSealPassword] = useState('')
+  const [sealMsg, setSealMsg] = useState('')
+  const [sealing, setSealing] = useState(false)
 
   useEffect(() => {
     loadProfile()
@@ -21,6 +26,7 @@ export default function Profile() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      setIsAnonymous(!!user.is_anonymous)
 
       const { data } = await supabase
         .from('profiles')
@@ -42,6 +48,15 @@ export default function Profile() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const sealScroll = async () => {
+    setSealing(true)
+    setSealMsg('')
+    const { error } = await supabase.auth.updateUser({ email: sealEmail, password: sealPassword })
+    if (error) setSealMsg(error.message)
+    else setSealMsg('A raven is on its way. Open the link in your email to seal your scroll.')
+    setSealing(false)
   }
 
   const playRecording = async (rec) => {
@@ -124,7 +139,6 @@ export default function Profile() {
           </p>
           <div className="divider-ornate mb-4">✦</div>
           <p className="text-white font-medium">{profile?.name}</p>
-          <p className="text-white/40 text-sm">{profile?.age} years old</p>
           {profile?.selected_world && (
             <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-kingdom-gold/5 border border-kingdom-gold/15">
               <span className="text-sm">{wMeta.emoji}</span>
@@ -183,13 +197,47 @@ export default function Profile() {
           </button>
         </div>
 
+        {/* Seal your scroll — only for nameless (anonymous) accounts */}
+        {isAnonymous && (
+          <div className="card-ornate mb-6">
+            <h3 className="text-kingdom-gold/70 text-sm font-display tracking-wide mb-1">📜 Seal your scroll</h3>
+            <p className="text-white/40 text-xs mb-4 leading-relaxed">
+              Your place in the realm is kept only on this device. Seal it with an email so you never lose your voice or your matches.
+            </p>
+            <div className="space-y-3">
+              <input
+                type="email"
+                value={sealEmail}
+                onChange={e => setSealEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="w-full bg-white/5 border border-kingdom-gold/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/25 focus:border-kingdom-gold/40 focus:outline-none"
+              />
+              <input
+                type="password"
+                value={sealPassword}
+                onChange={e => setSealPassword(e.target.value)}
+                minLength={6}
+                placeholder="A secret word (6+ characters)"
+                className="w-full bg-white/5 border border-kingdom-gold/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/25 focus:border-kingdom-gold/40 focus:outline-none"
+              />
+              {sealMsg && <p className="text-kingdom-gold/70 text-xs">{sealMsg}</p>}
+              <button
+                onClick={sealScroll}
+                disabled={sealing || !sealEmail || sealPassword.length < 6}
+                className="btn-gold w-full disabled:opacity-40"
+              >
+                {sealing ? 'Sealing...' : 'Seal'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Settings */}
         <div className="card-ornate mb-6">
           <h3 className="text-kingdom-gold/50 text-sm font-display tracking-wide mb-4">Settings</h3>
           <div className="space-y-1">
             {[
-              { label: 'Edit Profile', path: '/edit-profile' },
-              { label: 'Change World', path: '/world-select' },
+              { label: 'Edit Your Legend', path: '/edit-profile' },
               { label: 'Retake Quiz', path: '/quiz' },
             ].map(item => (
               <button
@@ -206,7 +254,10 @@ export default function Profile() {
 
         {/* Logout */}
         <button
-          onClick={handleLogout}
+          onClick={() => {
+            if (isAnonymous && !window.confirm('Your scroll is not sealed. If you leave, this account is lost forever. Leave anyway?')) return
+            handleLogout()
+          }}
           className="w-full text-center text-red-400/40 text-sm hover:text-red-400/70 transition-colors py-3"
         >
           Leave the Kingdom

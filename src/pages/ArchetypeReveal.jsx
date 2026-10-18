@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
 import AmbientBackground from '../components/AmbientBackground'
 
 const archetypes = {
@@ -73,14 +74,23 @@ export default function ArchetypeReveal() {
   const location = useLocation()
   const navigate = useNavigate()
   const [revealed, setRevealed] = useState(false)
+  const [gender, setGender] = useState(null)
+  const alias = location.state?.alias
 
   const archetypeKey = location.state?.archetype || 'protector'
   const archetype = archetypes[archetypeKey]
 
   useEffect(() => {
     const timer = setTimeout(() => setRevealed(true), 800)
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data } = await supabase.from('profiles').select('gender').eq('id', user.id).single()
+      setGender(data?.gender || null)
+    })
     return () => clearTimeout(timer)
   }, [])
+
+  const isBard = gender === 'male'
 
   return (
     <div className={`min-h-screen bg-gradient-to-b ${archetype.color} flex flex-col items-center justify-center px-6 text-center relative overflow-hidden`}>
@@ -118,6 +128,12 @@ export default function ArchetypeReveal() {
           {archetype.title}
         </p>
 
+        {alias && (
+          <p className="text-kingdom-gold/80 text-sm mb-6 font-display">
+            The realm shall call you <span className="text-kingdom-gold">{alias}</span>
+          </p>
+        )}
+
         {/* Description */}
         <div className="card-ornate text-left mb-6">
           <p className="text-white/60 text-base leading-relaxed">
@@ -132,10 +148,10 @@ export default function ArchetypeReveal() {
 
         {/* CTA */}
         <button
-          onClick={() => navigate('/world-select')}
+          onClick={() => navigate(isBard ? '/voice-record' : '/worlds')}
           className="btn-gold w-full text-lg glow-gold relative overflow-hidden group"
         >
-          <span className="relative z-10">Choose Your World</span>
+          <span className="relative z-10">{isBard ? 'Answer the First Quest' : 'Enter the Kingdom'}</span>
           <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         </button>
       </div>

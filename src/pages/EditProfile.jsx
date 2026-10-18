@@ -5,8 +5,6 @@ import AmbientBackground from '../components/AmbientBackground'
 
 export default function EditProfile() {
   const navigate = useNavigate()
-  const [name, setName] = useState('')
-  const [age, setAge] = useState('')
   const [bio, setBio] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -22,13 +20,11 @@ export default function EditProfile() {
 
       const { data } = await supabase
         .from('profiles')
-        .select('name, age, bio')
+        .select('bio')
         .eq('id', user.id)
         .single()
 
       if (data) {
-        setName(data.name || '')
-        setAge(data.age?.toString() || '')
         setBio(data.bio || '')
       }
     } catch (err) {
@@ -46,7 +42,7 @@ export default function EditProfile() {
 
       const { error } = await supabase
         .from('profiles')
-        .update({ name, age: parseInt(age), bio })
+        .update({ bio })
         .eq('id', user.id)
 
       if (error) throw error
@@ -81,29 +77,19 @@ export default function EditProfile() {
           >
             ← Back
           </button>
-          <h1 className="font-display text-2xl text-shimmer">Edit Profile</h1>
+          <h1 className="font-display text-2xl text-shimmer">Your Legend</h1>
         </div>
 
         <div className="card-ornate">
           <div className="space-y-5">
             <div>
-              <label className="text-kingdom-gold/40 text-xs uppercase tracking-wider mb-1.5 block font-display">Name</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} className={inputClass} />
-            </div>
-
-            <div>
-              <label className="text-kingdom-gold/40 text-xs uppercase tracking-wider mb-1.5 block font-display">Age</label>
-              <input type="number" value={age} onChange={e => setAge(e.target.value)} min="18" max="65" className={inputClass} />
-            </div>
-
-            <div>
-              <label className="text-kingdom-gold/40 text-xs uppercase tracking-wider mb-1.5 block font-display">Bio (optional)</label>
+              <label className="text-kingdom-gold/40 text-xs uppercase tracking-wider mb-1.5 block font-display">A few words of legend</label>
               <textarea
                 value={bio}
                 onChange={e => setBio(e.target.value)}
                 maxLength={200}
                 rows={3}
-                placeholder="A few words about yourself..."
+                placeholder="A line the realm will whisper about you..."
                 className={`${inputClass} resize-none`}
               />
               <p className="text-white/15 text-xs mt-1 text-right">{bio.length}/200</p>
@@ -111,7 +97,7 @@ export default function EditProfile() {
 
             <button
               onClick={handleSave}
-              disabled={saving || !name || !age}
+              disabled={saving}
               className="btn-gold w-full mt-2 disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save Changes'}

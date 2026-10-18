@@ -5,6 +5,7 @@ import { supabase } from './lib/supabase'
 // Pages
 import Landing from './pages/Landing'
 import SignUp from './pages/SignUp'
+import Gate from './pages/Gate'
 import Quiz from './pages/Quiz'
 import ArchetypeReveal from './pages/ArchetypeReveal'
 import WorldSelect from './pages/WorldSelect'
@@ -51,6 +52,7 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={session ? <Navigate to="/worlds" /> : <Landing />} />
+        <Route path="/gate" element={<Gate />} />
         <Route path="/signup" element={<SignUp />} />
 
         {/* Onboarding routes */}

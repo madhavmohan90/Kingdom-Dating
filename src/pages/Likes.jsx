@@ -154,7 +154,7 @@ export default function Likes() {
                     </span>
                     <div className="flex-1">
                       <p className="text-white font-medium text-sm">
-                        {like.liker?.name}, {like.liker?.age}
+                        {like.liker?.name}
                       </p>
                       <p className="text-white/40 text-xs">
                         Liked your voice

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { generateAlias } from '../data/aliases'
 import AmbientBackground from '../components/AmbientBackground'
 
 const questions = [
@@ -86,10 +87,13 @@ export default function Quiz() {
 
   const saveArchetype = async (archetype) => {
     const { data: { user } } = await supabase.auth.getUser()
+    let alias = null
     if (user) {
-      await supabase.from('profiles').update({ archetype }).eq('id', user.id)
+      const { data: me } = await supabase.from('profiles').select('gender').eq('id', user.id).single()
+      alias = generateAlias(me?.gender, archetype)
+      await supabase.from('profiles').update({ archetype, name: alias }).eq('id', user.id)
     }
-    navigate('/archetype', { state: { archetype } })
+    navigate('/archetype', { state: { archetype, alias } })
   }
 
   return (

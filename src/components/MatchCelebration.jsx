@@ -102,7 +102,7 @@ export default function MatchCelebration({ matchData, onClose }) {
                 {otherUser.name}
               </p>
               <p className="text-white/40 text-sm">
-                {archetype.name} · {otherUser.age} years old
+                {archetype.name}
               </p>
             </div>
           )}
