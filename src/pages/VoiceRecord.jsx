@@ -86,16 +86,18 @@ export default function VoiceRecord() {
     setUploading(true)
 
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError) {
-        alert('Auth error: ' + authError.message + '. Please log in again.')
-        navigate('/login')
-        return
-      }
+      // Use getSession (cached) first, fall back to getUser (server check)
+      const { data: { session } } = await supabase.auth.getSession()
+      let user = session?.user
       if (!user) {
-        alert('Not logged in. Please log in first.')
-        navigate('/login')
-        return
+        // Try server check as fallback
+        const { data: { user: serverUser }, error: authError } = await supabase.auth.getUser()
+        user = serverUser
+        if (authError || !user) {
+          alert('You need to log in first to save your recording.')
+          navigate('/signup')
+          return
+        }
       }
       if (!audioBlob) {
         alert('No recording found. Please record your voice first.')
