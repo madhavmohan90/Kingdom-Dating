@@ -86,25 +86,74 @@ export default function VoiceRecord() {
     setUploading(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user || !audioBlob) return
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError) {
+        alert('Auth error: ' + authError.message + '. Please log in again.')
+        navigate('/login')
+        return
+      }
+      if (!user) {
+        alert('Not logged in. Please log in first.')
+        navigate('/login')
+        return
+      }
+      if (!audioBlob) {
+        alert('No recording found. Please record your voice first.')
+        return
+      }
+
+      console.log('Uploading for user:', user.id, 'blob size:', audioBlob.size)
+
+      // First, try to list buckets to find the right name
+      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets()
+      console.log('Available buckets:', buckets?.map(b => b.name), 'error:', bucketError)
+
+      // Find the right bucket - try exact match first, then fuzzy
+      let bucketName = 'voice-recordings'
+      if (buckets && buckets.length > 0) {
+        const exactMatch = buckets.find(b => b.name === 'voice-recordings')
+        if (!exactMatch) {
+          // Look for any bucket with "voice" in the name
+          const voiceBucket = buckets.find(b => b.name.toLowerCase().includes('voice'))
+          if (voiceBucket) {
+            console.log('Using bucket:', voiceBucket.name, '(exact "voice-recordings" not found)')
+            bucketName = voiceBucket.name
+          } else {
+            console.log('No voice bucket found! Available:', buckets.map(b => b.name))
+            alert('Storage bucket "voice-recordings" not found. Available buckets: ' +
+              buckets.map(b => b.name).join(', ') +
+              '\n\nPlease create a bucket named "voice-recordings" in Supabase Storage.')
+            return
+          }
+        }
+      }
 
       const fileName = `${user.id}/${prompt.id}-${Date.now()}.webm`
 
       // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('voice-recordings')
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(bucketName)
         .upload(fileName, audioBlob, { contentType: 'audio/webm' })
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError)
+        throw new Error('Storage upload: ' + (uploadError.message || uploadError.error || JSON.stringify(uploadError)))
+      }
+
+      console.log('Upload success:', uploadData)
 
       // Save recording reference
-      await supabase.from('voice_recordings').insert({
+      const { error: dbError } = await supabase.from('voice_recordings').insert({
         user_id: user.id,
         prompt_id: prompt.id,
         storage_path: fileName,
         is_primary: currentPrompt === 0,
       })
+
+      if (dbError) {
+        console.error('DB insert error:', dbError)
+        throw new Error('Database save: ' + dbError.message)
+      }
 
       // If first prompt done, go to main app. Otherwise next prompt.
       if (currentPrompt === 0) {
