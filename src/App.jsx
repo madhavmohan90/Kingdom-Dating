@@ -14,6 +14,7 @@ import Likes from './pages/Likes'
 import Chats from './pages/Chats'
 import Profile from './pages/Profile'
 import ChatRoom from './pages/ChatRoom'
+import EditProfile from './pages/EditProfile'
 
 // Components
 import BottomNav from './components/BottomNav'
@@ -58,8 +59,9 @@ function App() {
         <Route path="/world-select" element={<WorldSelect />} />
         <Route path="/voice-record" element={<VoiceRecord />} />
 
-        {/* Chat room (no bottom nav) */}
+        {/* Chat room and edit profile (no bottom nav) */}
         <Route path="/chat/:matchId" element={<ChatRoom />} />
+        <Route path="/edit-profile" element={<EditProfile />} />
 
         {/* Main app routes (with bottom nav) */}
         <Route path="/worlds" element={<><Discover /><BottomNav active="worlds" /></>} />

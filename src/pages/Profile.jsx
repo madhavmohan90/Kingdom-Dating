@@ -96,15 +96,24 @@ export default function Profile() {
         <div className="card-dark mb-6">
           <h3 className="text-white/60 text-sm font-medium mb-4">Settings</h3>
           <div className="space-y-3">
-            <button className="w-full flex items-center justify-between py-2 text-white/60 hover:text-white/80 text-sm">
+            <button
+              onClick={() => navigate('/edit-profile')}
+              className="w-full flex items-center justify-between py-2 text-white/60 hover:text-white/80 text-sm"
+            >
               <span>Edit Profile</span>
               <span>→</span>
             </button>
-            <button className="w-full flex items-center justify-between py-2 text-white/60 hover:text-white/80 text-sm">
+            <button
+              onClick={() => navigate('/world-select')}
+              className="w-full flex items-center justify-between py-2 text-white/60 hover:text-white/80 text-sm"
+            >
               <span>Change World</span>
               <span>→</span>
             </button>
-            <button className="w-full flex items-center justify-between py-2 text-white/60 hover:text-white/80 text-sm">
+            <button
+              onClick={() => navigate('/quiz')}
+              className="w-full flex items-center justify-between py-2 text-white/60 hover:text-white/80 text-sm"
+            >
               <span>Retake Quiz</span>
               <span>→</span>
             </button>

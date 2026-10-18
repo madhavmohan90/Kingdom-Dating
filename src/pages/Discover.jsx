@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import MatchCelebration from '../components/MatchCelebration'
 
 export default function Discover() {
   const [profiles, setProfiles] = useState([])
@@ -7,6 +8,7 @@ export default function Discover() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [loading, setLoading] = useState(true)
   const [audioLoading, setAudioLoading] = useState(false)
+  const [matchData, setMatchData] = useState(null)
   const audioRef = useRef(null)
 
   useEffect(() => {
@@ -130,6 +132,21 @@ export default function Discover() {
         liker_id: user.id,
         liked_id: currentProfile.id,
       })
+
+      // Check if a match was created (mutual like triggers auto-match)
+      const { data: match } = await supabase
+        .from('matches')
+        .select('id')
+        .or(`and(user1_id.eq.${user.id},user2_id.eq.${currentProfile.id}),and(user1_id.eq.${currentProfile.id},user2_id.eq.${user.id})`)
+        .maybeSingle()
+
+      if (match) {
+        setMatchData({
+          matchId: match.id,
+          otherUser: currentProfile,
+        })
+        return // Don't advance yet — celebration screen will handle it
+      }
     }
 
     nextProfile()
@@ -289,6 +306,17 @@ export default function Discover() {
           {currentIndex + 1} of {profiles.length} voices
         </p>
       </div>
+
+      {/* Match celebration overlay */}
+      {matchData && (
+        <MatchCelebration
+          matchData={matchData}
+          onClose={() => {
+            setMatchData(null)
+            nextProfile()
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import MatchCelebration from '../components/MatchCelebration'
 
 export default function Likes() {
   const [likes, setLikes] = useState([])
   const [loading, setLoading] = useState(true)
   const [playingId, setPlayingId] = useState(null)
   const [userId, setUserId] = useState(null)
+  const [matchData, setMatchData] = useState(null)
   const audioRef = useRef(null)
 
   useEffect(() => {
@@ -77,17 +79,30 @@ export default function Likes() {
     }
   }
 
-  const handleLikeBack = async (likedUserId) => {
+  const handleLikeBack = async (likedUserId, likerProfile) => {
     if (!userId) return
     try {
       await supabase.from('likes').insert({
         liker_id: userId,
         liked_id: likedUserId,
       })
-      // The auto-match trigger will create a match if mutual
-      alert('You liked them back! Check your Chats if it\'s a match.')
+
+      // Check if auto-match trigger created a match
+      const { data: match } = await supabase
+        .from('matches')
+        .select('id')
+        .or(`and(user1_id.eq.${userId},user2_id.eq.${likedUserId}),and(user1_id.eq.${likedUserId},user2_id.eq.${userId})`)
+        .maybeSingle()
+
+      if (match) {
+        setMatchData({
+          matchId: match.id,
+          otherUser: likerProfile,
+        })
+      } else {
+        alert('You liked them back!')
+      }
     } catch (err) {
-      // Might already exist
       if (err.code === '23505') {
         alert('You already liked this person!')
       }
@@ -175,7 +190,7 @@ export default function Likes() {
                       </button>
                     )}
                     <button
-                      onClick={() => handleLikeBack(like.liker?.id)}
+                      onClick={() => handleLikeBack(like.liker?.id, like.liker)}
                       className="flex-1 btn-gold text-xs py-2"
                     >
                       Like Back
@@ -187,6 +202,14 @@ export default function Likes() {
           </div>
         )}
       </div>
+
+      {/* Match celebration overlay */}
+      {matchData && (
+        <MatchCelebration
+          matchData={matchData}
+          onClose={() => setMatchData(null)}
+        />
+      )}
     </div>
   )
 }
