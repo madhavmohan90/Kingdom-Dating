@@ -195,7 +195,7 @@ export default function VoiceRecord() {
               <div className="flex gap-3 w-full">
                 <button onClick={reRecord} className="btn-outline flex-1">Try again</button>
                 <button onClick={saveAndContinue} disabled={uploading} className="btn-gold flex-1 disabled:opacity-50">
-                  {uploading ? 'Sealing…' : step < 2 ? 'Next trial →' : 'Enter the realm →'}
+                  {uploading ? 'Sealing…' : step < 2 ? 'Save & next trial →' : 'Submit my voice ✦'}
                 </button>
               </div>
             </>
