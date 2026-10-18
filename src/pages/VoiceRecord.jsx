@@ -114,7 +114,8 @@ export default function VoiceRecord() {
         reRecord()
       }
     } catch (err) {
-      alert('Upload failed. Please try again.')
+      console.error('Upload error:', err)
+      alert('Upload failed: ' + (err.message || JSON.stringify(err)))
     } finally {
       setUploading(false)
     }
@@ -219,14 +220,12 @@ export default function VoiceRecord() {
         </div>
 
         {/* Skip option */}
-        {currentPrompt > 0 && (
-          <button
-            onClick={() => navigate('/worlds')}
-            className="text-white/30 text-sm text-center mt-6 hover:text-white/50"
-          >
-            Skip for now
-          </button>
-        )}
+        <button
+          onClick={() => navigate('/worlds')}
+          className="text-white/30 text-sm text-center mt-6 hover:text-white/50"
+        >
+          Skip for now
+        </button>
       </div>
     </div>
   )
