@@ -180,6 +180,15 @@ export default function VoiceRecord() {
           </p>
         </div>
 
+        {/* Spoken name — first recording only */}
+        {currentPrompt === 0 && (
+          <div className="mb-4 px-4 py-3 rounded-xl border border-kingdom-gold/15 bg-kingdom-gold/5">
+            <p className="text-kingdom-gold/80 text-xs font-display leading-relaxed">
+              🎙️ Begin by speaking your name: <span className="text-white/70 italic">"I am …"</span>. In this realm, your name is heard, never written.
+            </p>
+          </div>
+        )}
+
         {/* Quest prompt */}
         <div className="rounded-2xl p-6 mb-8 relative overflow-hidden"
              style={{
