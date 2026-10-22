@@ -1,3 +1,5 @@
+import { isRiddleId, riddleFor } from './gamification'
+
 // ─── The Three Trials ────────────────────────────────────────────────
 // Everyone (men and women) answers three trials out loud: one dramatic,
 // one sacrifice, one funny. Others listen to HOW you answer.
@@ -7,6 +9,7 @@ export const trialKinds = {
   sacrifice: { label: 'Trial of the Heart', emoji: '🩸' },
   funny: { label: 'Trial of Mischief', emoji: '🧹' },
   legacy: { label: 'Old Quest', emoji: '📜' },
+  riddle: { label: "Tonight's Riddle", emoji: '🌙' },
 }
 
 export const questPool = [
@@ -35,6 +38,9 @@ export const questById = Object.fromEntries(questPool.map(q => [q.id, q]))
 // Finds the question for any recording, including answers made before the
 // three-trial update (those get a generic label so the text is never blank).
 export function getQuest(id) {
+  if (isRiddleId(id)) {
+    return { text: riddleFor(id.slice('riddle-'.length)), label: "🌙 Tonight's Riddle" }
+  }
   if (questById[id]) {
     const q = questById[id]
     return { text: q.text, label: `${trialKinds[q.kind].emoji} ${trialKinds[q.kind].label}` }

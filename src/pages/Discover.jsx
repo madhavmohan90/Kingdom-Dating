@@ -4,6 +4,10 @@ import MatchCelebration from '../components/MatchCelebration'
 import AmbientBackground from '../components/AmbientBackground'
 import { getQuest } from '../data/prompts'
 import { useNavigate } from 'react-router-dom'
+import EmberBar from '../components/EmberBar'
+import EmberToast from '../components/EmberToast'
+import { EMBERS } from '../data/gamification'
+import { narrate } from '../lib/narrator'
 
 export default function Discover() {
   const navigate = useNavigate()
@@ -18,6 +22,9 @@ export default function Discover() {
   const [myWorld, setMyWorld] = useState('kingdom')
   const [swipeOffset, setSwipeOffset] = useState(0)
   const [swiping, setSwiping] = useState(false)
+  const [answerIdx, setAnswerIdx] = useState(0)
+  const [riddleDone, setRiddleDone] = useState(true)
+  const [toast, setToast] = useState(null)
   const audioRef = useRef(null)
   const touchStart = useRef(null)
 
@@ -134,6 +141,8 @@ export default function Discover() {
         liker_id: user.id,
         liked_id: currentProfile.id,
       })
+      setToast({ amount: EMBERS.like, label: 'Brave heart' })
+      setTimeout(() => setToast(null), 1500)
 
       const { data: match } = await supabase
         .from('matches')
@@ -142,6 +151,7 @@ export default function Discover() {
         .maybeSingle()
 
       if (match) {
+        narrate('match')
         setMatchData({ matchId: match.id, otherUser: currentProfile })
         return
       }
@@ -160,6 +170,7 @@ export default function Discover() {
   }
 
   const nextProfile = () => {
+    setAnswerIdx(0)
     if (currentIndex < profiles.length - 1) {
       setCurrentIndex(prev => prev + 1)
       setIsPlaying(false)
@@ -220,7 +231,17 @@ export default function Discover() {
     return (
       <div className={`min-h-screen ${meta.bgClass} flex flex-col items-center justify-center px-6 pb-20 text-center relative overflow-hidden`}>
         <AmbientBackground world={myWorld} />
-        <div className="relative z-10">
+        <div className="relative z-10 w-full max-w-md">
+          <div className="mb-8"><EmberBar onLoaded={pr => setRiddleDone(pr.riddleDoneToday)} /></div>
+          {!riddleDone && (
+            <button
+              onClick={() => navigate('/voice-record?daily=1')}
+              className="w-full text-left mb-6 p-4 rounded-2xl border border-kingdom-gold/30 bg-kingdom-gold/5 hover:bg-kingdom-gold/10 transition-all animate-fade-in"
+            >
+              <p className="text-kingdom-gold/60 text-[10px] uppercase tracking-[0.3em] font-display mb-1">🌙 Tonight's Riddle · +{EMBERS.riddle} embers</p>
+              <p className="text-white/80 text-sm font-display">A new question waits. Answer it with your voice →</p>
+            </button>
+          )}
           <div className="text-6xl mb-6 animate-float-slow">🐉</div>
           <h2 className="font-display text-2xl text-shimmer mb-3">
             The Night Is Quiet
@@ -240,20 +261,24 @@ export default function Discover() {
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .filter(r => !seen.has(r.prompt_id) && seen.add(r.prompt_id))
     .slice(0, 3)
+  const rec = recordings[Math.min(answerIdx, recordings.length - 1)]
+  const q = rec ? getQuest(rec.prompt_id) : null
 
   return (
     <div className={`min-h-screen ${meta.bgClass} px-6 pt-12 pb-24 relative overflow-hidden`}>
       <AmbientBackground world={myWorld} />
 
       <div className="max-w-md mx-auto relative z-10">
-        {/* World header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <p className="text-white/30 text-xs tracking-[0.2em] uppercase">Listen closely</p>
-            <h1 className="font-display text-xl text-shimmer">Voices in the Dark</h1>
-          </div>
-          <span className="text-2xl animate-float-slow">🔮</span>
-        </div>
+        <div className="mb-6"><EmberBar onLoaded={pr => setRiddleDone(pr.riddleDoneToday)} /></div>
+          {!riddleDone && (
+            <button
+              onClick={() => navigate('/voice-record?daily=1')}
+              className="w-full text-left mb-6 p-4 rounded-2xl border border-kingdom-gold/30 bg-kingdom-gold/5 hover:bg-kingdom-gold/10 transition-all animate-fade-in"
+            >
+              <p className="text-kingdom-gold/60 text-[10px] uppercase tracking-[0.3em] font-display mb-1">🌙 Tonight's Riddle · +{EMBERS.riddle} embers</p>
+              <p className="text-white/80 text-sm font-display">A new question waits. Answer it with your voice →</p>
+            </button>
+          )}
 
         {/* Voice card — swipeable */}
         <div
@@ -274,38 +299,38 @@ export default function Discover() {
             <p className="font-display text-xl text-shimmer">{currentProfile.name}</p>
           </div>
 
-          {/* Their trials */}
-          <div className="space-y-3 mb-6">
-            {recordings.map(rec => {
-              const q = getQuest(rec.prompt_id)
-              const playing = playingPath === rec.storage_path
-              return (
-                <button
-                  key={rec.id}
-                  onClick={() => playAudio(rec.storage_path)}
-                  className={`w-full text-left rounded-xl p-4 flex items-start gap-3 transition-all border
-                    ${playing ? 'bg-kingdom-gold/10 border-kingdom-gold/30' : 'bg-white/3 border-kingdom-gold/8 hover:border-kingdom-gold/20'}`}
-                >
-                  <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-all
-                    ${playing ? 'bg-gradient-gold pulse-ring' : 'bg-gradient-gold glow-gold opacity-90'}`}>
-                    {audioLoading === rec.storage_path ? (
-                      <div className="w-4 h-4 border-2 border-kingdom-darker border-t-transparent rounded-full animate-spin" />
-                    ) : playing ? (
-                      <svg className="w-4 h-4 text-kingdom-darker" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
-                    ) : (
-                      <svg className="w-4 h-4 text-kingdom-darker ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-kingdom-gold/50 text-[10px] uppercase tracking-[0.2em] font-display mb-1">
-                      {q.label}
-                    </p>
-                    <p className="text-white/70 text-sm leading-snug">{q.text}</p>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
+          {/* One answer at a time */}
+          {rec && (
+            <div className="text-center mb-6" key={rec.id}>
+              <p className="text-kingdom-gold/50 text-[10px] uppercase tracking-[0.2em] font-display mb-2">{q.label}</p>
+              <p className="text-white/75 text-sm leading-relaxed mb-6 min-h-[3rem] animate-fade-in">{q.text}</p>
+              <button
+                onClick={() => playAudio(rec.storage_path)}
+                className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center transition-all
+                  ${playingPath === rec.storage_path ? 'bg-gradient-gold pulse-ring scale-105' : 'bg-gradient-gold glow-gold hover:scale-105'}`}
+              >
+                {audioLoading === rec.storage_path ? (
+                  <div className="w-6 h-6 border-2 border-kingdom-darker border-t-transparent rounded-full animate-spin" />
+                ) : playingPath === rec.storage_path ? (
+                  <svg className="w-7 h-7 text-kingdom-darker" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>
+                ) : (
+                  <svg className="w-7 h-7 text-kingdom-darker ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                )}
+              </button>
+              {recordings.length > 1 && (
+                <div className="flex justify-center gap-2 mt-5">
+                  {recordings.map((r, i) => (
+                    <button
+                      key={r.id}
+                      onClick={() => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; setPlayingPath(null) } setAnswerIdx(i) }}
+                      aria-label={`Answer ${i + 1}`}
+                      className={`h-2 rounded-full transition-all ${i === answerIdx ? 'w-6 bg-kingdom-gold' : 'w-2 bg-white/20'}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action buttons */}
           <div className="flex gap-3">
@@ -324,14 +349,6 @@ export default function Discover() {
           </div>
         </div>
 
-        {/* Counter + swipe hint */}
-        <div className="divider-ornate mt-6 mb-2">
-          <span className="text-white/20 text-xs">{currentIndex + 1} of {profiles.length}</span>
-        </div>
-        <p className="text-white/10 text-[10px] text-center">
-          ← swipe to skip · swipe to like →
-        </p>
-
         {/* Swipe indicator overlay */}
         {swiping && Math.abs(swipeOffset) > 50 && (
           <div className="fixed top-1/3 left-0 right-0 flex justify-center pointer-events-none z-40">
@@ -345,6 +362,8 @@ export default function Discover() {
           </div>
         )}
       </div>
+
+      <EmberToast amount={toast?.amount} label={toast?.label} />
 
       {/* Match celebration overlay */}
       {matchData && (

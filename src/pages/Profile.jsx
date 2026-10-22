@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getQuest } from '../data/prompts'
 import AmbientBackground from '../components/AmbientBackground'
+import EmberBar from '../components/EmberBar'
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -16,6 +17,7 @@ export default function Profile() {
   const [sealPassword, setSealPassword] = useState('')
   const [sealMsg, setSealMsg] = useState('')
   const [sealing, setSealing] = useState(false)
+  const [progress, setProgress] = useState(null)
 
   useEffect(() => {
     loadProfile()
@@ -123,6 +125,30 @@ export default function Profile() {
           </p>
           <div className="divider-ornate mb-2">✦</div>
           {profile?.bio && <p className="text-white/50 text-sm italic mt-3">"{profile.bio}"</p>}
+        </div>
+
+        {/* Level and badges */}
+        <div className="card-ornate mb-6">
+          <h3 className="text-kingdom-gold/50 text-sm font-display tracking-wide mb-3">Your Rise</h3>
+          <EmberBar onLoaded={setProgress} />
+          {progress && (
+            <>
+              <div className="grid grid-cols-3 gap-2 mt-4">
+                {progress.badges.map(b => (
+                  <div key={b.id} title={b.hint}
+                       className={`rounded-xl p-3 text-center border transition-all
+                         ${b.has ? 'border-kingdom-gold/30 bg-kingdom-gold/8' : 'border-white/5 bg-white/2 opacity-35 grayscale'}`}>
+                    <div className="text-2xl mb-1">{b.emoji}</div>
+                    <p className="text-[10px] font-display text-white/70 leading-tight">{b.name}</p>
+                    {!b.has && <p className="text-[9px] text-white/40 mt-1 leading-tight">{b.hint}</p>}
+                  </div>
+                ))}
+              </div>
+              <p className="text-white/30 text-[11px] mt-3 text-center">
+                Earn embers: answer trials and riddles, like voices, match, send voice notes.
+              </p>
+            </>
+          )}
         </div>
 
         {/* Voice recordings */}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import MatchCelebration from '../components/MatchCelebration'
+import { narrate } from '../lib/narrator'
 
 export default function Likes() {
   const [likes, setLikes] = useState([])
@@ -95,6 +96,7 @@ export default function Likes() {
         .maybeSingle()
 
       if (match) {
+        narrate('match')
         setMatchData({
           matchId: match.id,
           otherUser: likerProfile,

@@ -1,14 +1,22 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { pickTrials, trialKinds, questPool } from '../data/prompts'
 import AmbientBackground from '../components/AmbientBackground'
+import EmberToast from '../components/EmberToast'
+import { narrate, stopNarration } from '../lib/narrator'
+import { EMBERS, riddleFor, riddleId, todayKey } from '../data/gamification'
 
 const MAX_SECONDS = 60
 
 export default function VoiceRecord() {
   const navigate = useNavigate()
-  const [trials, setTrials] = useState(() => pickTrials())
+  const [searchParams] = useSearchParams()
+  const isRiddle = searchParams.get('daily') === '1'
+  const [trials, setTrials] = useState(() => isRiddle
+    ? [{ id: riddleId(), kind: 'riddle', text: riddleFor(todayKey()), narrator: 'The moon rises. A new riddle waits for your voice.' }]
+    : pickTrials())
+  const [toast, setToast] = useState(null)
   const [step, setStep] = useState(0)
   const [isRecording, setIsRecording] = useState(false)
   const [seconds, setSeconds] = useState(0)
@@ -23,10 +31,17 @@ export default function VoiceRecord() {
   const trial = trials[step]
   const kind = trialKinds[trial.kind]
 
-  useEffect(() => () => clearInterval(timer.current), [])
+  useEffect(() => () => { clearInterval(timer.current); stopNarration() }, [])
+
+  // The narrator reads each question aloud (silent until the ElevenLabs clips are added)
+  useEffect(() => {
+    if (isRiddle) narrate('riddle')
+    else narrate(step === 0 ? ['trials-intro', trial.id] : trial.id)
+  }, [trial.id])
 
   const startRecording = async () => {
     try {
+      stopNarration()
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       mediaRecorder.current = new MediaRecorder(stream)
       chunks.current = []
@@ -108,7 +123,10 @@ export default function VoiceRecord() {
 
       const count = savedCount + 1
       setSavedCount(count)
-      goNext(count)
+      setToast(isRiddle
+        ? { amount: EMBERS.riddle, label: 'Riddle answered' }
+        : { amount: EMBERS.trial, label: step < trials.length - 1 ? `Trial ${step + 1} survived` : 'All three trials survived!' })
+      setTimeout(() => { setToast(null); goNext(count) }, 1500)
     } catch (err) {
       alert('Could not save your voice: ' + err.message)
     } finally {
@@ -121,8 +139,10 @@ export default function VoiceRecord() {
       <AmbientBackground world="kingdom" />
 
       <div className="max-w-md mx-auto w-full flex-1 flex flex-col relative z-10">
+        <EmberToast amount={toast?.amount} label={toast?.label} />
+
         {/* Progress: three trial dots */}
-        <div className="flex items-center justify-center gap-3 mb-8">
+        <div className={`flex items-center justify-center gap-3 mb-8 ${isRiddle ? 'hidden' : ''}`}>
           {trials.map((t, i) => (
             <div key={t.id} className={`flex items-center justify-center w-10 h-10 rounded-full border text-lg transition-all
               ${i === step ? 'border-kingdom-gold bg-kingdom-gold/15 scale-110'
@@ -135,7 +155,7 @@ export default function VoiceRecord() {
 
         <div className="text-center mb-6 animate-fade-in" key={trial.id}>
           <p className="text-kingdom-gold/50 text-xs tracking-[0.3em] uppercase font-display mb-2">
-            Trial {step + 1} of 3 · {kind.label}
+            {isRiddle ? `🌙 ${kind.label} · +${EMBERS.riddle} embers` : `Trial ${step + 1} of 3 · ${kind.label} · +${EMBERS.trial} embers`}
           </p>
           <p className="text-white/35 text-sm italic">{trial.narrator}</p>
         </div>
@@ -151,7 +171,7 @@ export default function VoiceRecord() {
           <p className="text-white/90 text-lg leading-relaxed font-display text-center">{trial.text}</p>
         </div>
 
-        {step === 0 && !audioUrl && (
+        {step === 0 && !isRiddle && !audioUrl && (
           <p className="text-kingdom-gold/60 text-xs text-center font-display mb-4">
             🎙️ Start with your name: <span className="text-white/70 italic">"I am …"</span> Then answer. Be yourself — laugh, think, go wild.
           </p>
@@ -195,14 +215,14 @@ export default function VoiceRecord() {
               <div className="flex gap-3 w-full">
                 <button onClick={reRecord} className="btn-outline flex-1">Try again</button>
                 <button onClick={saveAndContinue} disabled={uploading} className="btn-gold flex-1 disabled:opacity-50">
-                  {uploading ? 'Sealing…' : step < 2 ? 'Save & next trial →' : 'Submit my voice ✦'}
+                  {uploading ? 'Sealing…' : step < trials.length - 1 ? 'Save & next trial →' : 'Submit my voice ✦'}
                 </button>
               </div>
             </>
           )}
         </div>
 
-        {!isRecording && !audioUrl && (
+        {!isRecording && !audioUrl && !isRiddle && (
           <button
             onClick={reroll}
             className="text-white/25 text-sm text-center mt-6 hover:text-white/50 transition-colors"

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import AmbientBackground from '../components/AmbientBackground'
 import { generateAlias } from '../data/aliases'
+import { narrate, stopNarration } from '../lib/narrator'
 
 const paths = [
   {
@@ -25,6 +26,8 @@ export default function Gate() {
   const [sworn, setSworn] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => { narrate('welcome'); return stopNarration }, [])
 
   const enter = async () => {
     if (!path || !sworn || loading) return

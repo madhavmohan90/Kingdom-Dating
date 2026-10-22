@@ -16,6 +16,7 @@ import EditProfile from './pages/EditProfile'
 
 // Components
 import BottomNav from './components/BottomNav'
+import MuteToggle from './components/MuteToggle'
 
 // Sends a returning visitor to the right place:
 // no voice yet -> the three trials, otherwise -> the voices.
@@ -71,6 +72,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-kingdom-darker">
+      <MuteToggle />
       <Routes>
         {/* Public routes */}
         <Route path="/" element={session ? <Entry /> : <Landing />} />

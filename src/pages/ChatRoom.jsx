@@ -3,6 +3,25 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { nudges } from '../data/prompts'
 import AmbientBackground from '../components/AmbientBackground'
+import EmberToast from '../components/EmberToast'
+import { EMBERS, todayKey } from '../data/gamification'
+
+// Days in a row (ending today or yesterday) on which BOTH people sent a voice note.
+function flameStreak(messages, me) {
+  const days = {}
+  for (const m of messages) {
+    const k = todayKey(new Date(m.created_at))
+    days[k] = days[k] || { mine: false, theirs: false }
+    if (m.sender_id === me) days[k].mine = true
+    else days[k].theirs = true
+  }
+  const both = k => days[k]?.mine && days[k]?.theirs
+  const d = new Date()
+  if (!both(todayKey(d))) d.setDate(d.getDate() - 1)
+  let streak = 0
+  while (both(todayKey(d))) { streak++; d.setDate(d.getDate() - 1) }
+  return { streak, litToday: both(todayKey()) }
+}
 
 export default function ChatRoom() {
   const { matchId } = useParams()
@@ -19,6 +38,7 @@ export default function ChatRoom() {
   const audioRef = useRef(null)
   const messagesEndRef = useRef(null)
   const [nudge, setNudge] = useState(null)
+  const [toast, setToast] = useState(null)
   const [nudgeDismissedAt, setNudgeDismissedAt] = useState(-1)
 
   useEffect(() => {
@@ -144,6 +164,8 @@ export default function ChatRoom() {
         })
 
       if (insertError) throw insertError
+      setToast({ amount: EMBERS.voiceNote, label: 'Voice note sent' })
+      setTimeout(() => setToast(null), 1500)
     } catch (err) {
       console.error('Error sending voice note:', err)
       alert('Failed to send. Try again.')
@@ -241,7 +263,16 @@ export default function ChatRoom() {
           <span className="text-2xl">{getArchetypeEmoji(otherUser?.archetype)}</span>
           <div>
             <p className="text-white font-medium">{otherUser?.name}</p>
-            <p className="text-white/30 text-xs">Voice notes only</p>
+            {(() => {
+              const { streak, litToday } = flameStreak(messages, userId)
+              return (
+                <p className={`text-xs ${streak > 0 ? 'text-orange-300/80' : 'text-white/30'}`}>
+                  {streak > 0
+                    ? `🔥 ${streak}-day flame${litToday ? '' : ' · keep it alive today'}`
+                    : 'Light a flame: both send a voice note today'}
+                </p>
+              )
+            })()}
           </div>
         </div>
       </div>
@@ -315,6 +346,8 @@ export default function ChatRoom() {
           <div ref={messagesEndRef} />
         </div>
       </div>
+
+      <EmberToast amount={toast?.amount} label={toast?.label} />
 
       {/* Record button */}
       <div className="px-6 py-6 border-t border-white/5 relative z-10">
