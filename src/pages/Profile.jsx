@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { getQuest } from '../data/prompts'
 import AmbientBackground from '../components/AmbientBackground'
 import EmberBar from '../components/EmberBar'
+import { narrate } from '../lib/narrator'
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -149,6 +150,26 @@ export default function Profile() {
               </p>
             </>
           )}
+        </div>
+
+        {/* Narrator preview */}
+        <div className="card-ornate mb-6">
+          <h3 className="text-kingdom-gold/50 text-sm font-display tracking-wide mb-3">🔊 The Narrator</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { key: 'welcome', label: 'Welcome' },
+              { key: 'trials-intro', label: 'Trials' },
+              { key: 'riddle', label: 'Riddle' },
+            ].map(c => (
+              <button
+                key={c.key}
+                onClick={() => narrate(c.key)}
+                className="py-3 rounded-xl border border-kingdom-gold/15 bg-white/3 text-white/70 text-xs font-display hover:border-kingdom-gold/40 hover:text-kingdom-gold transition-all"
+              >
+                ▶ {c.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Voice recordings */}
