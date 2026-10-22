@@ -1,10 +1,23 @@
-// Small floating button to turn the narrator on or off.
+// Floating speaker button: turns the narrator on/off, and invites a tap
+// when the browser has blocked a narration clip.
 import { useEffect, useState } from 'react'
-import { isMuted, setMuted, onMuteChange } from '../lib/narrator'
+import { isMuted, setMuted, onMuteChange, onPendingChange } from '../lib/narrator'
 
 export default function MuteToggle() {
   const [muted, setM] = useState(isMuted())
+  const [waiting, setWaiting] = useState(false)
   useEffect(() => onMuteChange(setM), [])
+  useEffect(() => onPendingChange(setWaiting), [])
+
+  if (waiting && !muted) {
+    return (
+      <button
+        className="fixed top-3 right-3 z-50 px-3 h-9 rounded-full bg-kingdom-gold/90 text-kingdom-darker text-xs font-display flex items-center gap-1.5 shadow-lg animate-pulse"
+      >
+        🔊 Tap to hear the narrator
+      </button>
+    )
+  }
 
   return (
     <button
