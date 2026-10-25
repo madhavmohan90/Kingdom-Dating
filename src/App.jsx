@@ -6,6 +6,7 @@ import { supabase } from './lib/supabase'
 import Landing from './pages/Landing'
 import SignUp from './pages/SignUp'
 import Gate from './pages/Gate'
+import SaveAccount from './pages/SaveAccount'
 import VoiceRecord from './pages/VoiceRecord'
 import Discover from './pages/Discover'
 import Likes from './pages/Likes'
@@ -77,6 +78,7 @@ function App() {
         {/* Public routes */}
         <Route path="/" element={session ? <Entry /> : <Landing />} />
         <Route path="/gate" element={<Gate />} />
+        <Route path="/save" element={<SaveAccount />} />
         <Route path="/signup" element={<SignUp />} />
 
         {/* Onboarding routes */}

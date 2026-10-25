@@ -82,8 +82,14 @@ export default function VoiceRecord() {
     if (step < trials.length - 1) {
       setStep(step + 1)
       reRecord()
+    } else if (count === 0) {
+      navigate('/me')
+    } else if (isRiddle) {
+      navigate('/worlds')
     } else {
-      navigate(count > 0 ? '/worlds' : '/me')
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        navigate(user?.is_anonymous ? '/save' : '/worlds')
+      })
     }
   }
 

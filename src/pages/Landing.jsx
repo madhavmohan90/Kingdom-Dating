@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import AmbientBackground from '../components/AmbientBackground'
+import { narrateFirst } from '../lib/narrator'
 
 export default function Landing() {
   const navigate = useNavigate()
@@ -40,6 +41,12 @@ export default function Landing() {
         <p className="text-kingdom-gold/70 text-lg mb-2 font-display tracking-wide">
           Fall for a voice. Not a face.
         </p>
+        <button
+          onClick={() => narrateFirst(['legend', 'welcome'])}
+          className="mx-auto mb-6 mt-2 flex items-center gap-2 px-4 py-2 rounded-full border border-kingdom-gold/30 text-kingdom-gold/90 text-sm font-display hover:bg-kingdom-gold/10 transition-colors"
+        >
+          🔊 Hear the legend
+        </button>
         <p className="text-white/40 text-sm mb-12 max-w-xs mx-auto leading-relaxed">
           No photos. No forms. Answer three wild trials with your voice — dragons, vampires, love potions — and fall for someone by how they answer.
         </p>

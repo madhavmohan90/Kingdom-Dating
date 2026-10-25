@@ -57,6 +57,22 @@ function playQueue(queue) {
   })
 }
 
+// Plays the first clip in the list that exists (e.g. ['legend', 'welcome']).
+export function narrateFirst(keys) {
+  stopNarration()
+  if (isMuted()) return
+  const list = [...keys]
+  const tryNext = () => {
+    const key = list.shift()
+    if (!key) return
+    const audio = new Audio(`${import.meta.env.BASE_URL}narration/${key}.mp3`)
+    current = audio
+    audio.onerror = tryNext
+    audio.play().catch(err => { if (err?.name === 'NotAllowedError') setPending([key]) })
+  }
+  tryNext()
+}
+
 // Plays one key, or several keys one after another.
 export function narrate(keys) {
   stopNarration()
