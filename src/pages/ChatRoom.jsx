@@ -107,6 +107,7 @@ export default function ChatRoom() {
   }
 
   const startRecording = async () => {
+    if (isRecording || mediaRecorder.current?.state === 'recording') return
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       mediaRecorder.current = new MediaRecorder(stream)
@@ -368,10 +369,7 @@ export default function ChatRoom() {
             </div>
           ) : (
             <button
-              onMouseDown={startRecording}
-              onMouseUp={stopRecording}
-              onTouchStart={startRecording}
-              onTouchEnd={stopRecording}
+              onClick={isRecording ? stopRecording : startRecording}
               className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 ${
                 isRecording
                   ? 'bg-red-500 scale-110 animate-pulse'
@@ -395,7 +393,7 @@ export default function ChatRoom() {
           )}
         </div>
         <p className="text-white/20 text-xs text-center mt-2">
-          {isRecording ? 'Release to send' : 'Hold to record'}
+          {isRecording ? 'Recording… tap again to send' : 'Tap the mic to record'}
         </p>
       </div>
     </div>
