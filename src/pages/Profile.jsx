@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getQuest } from '../data/prompts'
 import AmbientBackground from '../components/AmbientBackground'
 import EmberBar from '../components/EmberBar'
 import { narrate } from '../lib/narrator'
+import { isRiddleId } from '../data/gamification'
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -19,6 +20,10 @@ export default function Profile() {
   const [sealMsg, setSealMsg] = useState('')
   const [sealing, setSealing] = useState(false)
   const [progress, setProgress] = useState(null)
+  const [badgeHint, setBadgeHint] = useState(null)
+  const [showSeal, setShowSeal] = useState(false)
+  const [searchParams] = useSearchParams()
+  const testMode = searchParams.get('test') === '1'
 
   useEffect(() => {
     loadProfile()
@@ -102,192 +107,165 @@ export default function Profile() {
     )
   }
 
-  const world = 'kingdom'
+  // Your current answers: newest per trial question, riddles left out, max 3
+  const seen = new Set()
+  const myAnswers = recordings
+    .filter(r => !isRiddleId(r.prompt_id))
+    .filter(r => !seen.has(r.prompt_id) && seen.add(r.prompt_id))
+    .slice(0, 3)
 
   return (
     <div className="min-h-screen bg-gradient-kingdom px-6 pt-12 pb-24 relative overflow-hidden">
-      <AmbientBackground world={world} />
+      <AmbientBackground world="kingdom" />
 
-      <div className="max-w-md mx-auto relative z-10">
-        {/* Header with ornament */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="font-display text-2xl text-shimmer">Your Profile</h1>
-          <span className="text-kingdom-gold/20 text-xs tracking-[0.3em]">✦</span>
-        </div>
-
-        {/* Archetype card */}
-        <div className="card-ornate text-center mb-6">
-          <div className="text-5xl mb-3 animate-float-slow">{profile?.gender === 'female' ? '🌙' : '⚔️'}</div>
-          <h2 className="font-display text-2xl text-shimmer mb-1">
-            {profile?.name || 'Wanderer'}
-          </h2>
-          <p className="text-white/40 text-sm italic mb-4">
+      <div className="max-w-md mx-auto relative z-10 space-y-5">
+        {/* Who you are */}
+        <div className="card-ornate text-center">
+          <div className="text-5xl mb-2 animate-float-slow">{profile?.gender === 'female' ? '🌙' : '⚔️'}</div>
+          <h1 className="font-display text-2xl text-shimmer">{profile?.name || 'Wanderer'}</h1>
+          <p className="text-white/40 text-sm italic mb-1">
             {profile?.gender === 'female' ? 'A Queen of the night' : 'A King of the night'}
           </p>
-          <div className="divider-ornate mb-2">✦</div>
-          {profile?.bio && <p className="text-white/50 text-sm italic mt-3">"{profile.bio}"</p>}
-        </div>
+          {profile?.bio && <p className="text-white/60 text-sm italic mt-2">"{profile.bio}"</p>}
 
-        {/* Level and badges */}
-        <div className="card-ornate mb-6">
-          <h3 className="text-kingdom-gold/50 text-sm font-display tracking-wide mb-3">Your Rise</h3>
-          <EmberBar onLoaded={setProgress} />
+          <div className="mt-5 text-left">
+            <EmberBar onLoaded={setProgress} />
+          </div>
+
           {progress && (
             <>
-              <div className="grid grid-cols-3 gap-2 mt-4">
+              <div className="flex justify-center gap-2 mt-4">
                 {progress.badges.map(b => (
-                  <div key={b.id} title={b.hint}
-                       className={`rounded-xl p-3 text-center border transition-all
-                         ${b.has ? 'border-kingdom-gold/30 bg-kingdom-gold/8' : 'border-white/5 bg-white/2 opacity-35 grayscale'}`}>
-                    <div className="text-2xl mb-1">{b.emoji}</div>
-                    <p className="text-[10px] font-display text-white/70 leading-tight">{b.name}</p>
-                    {!b.has && <p className="text-[9px] text-white/40 mt-1 leading-tight">{b.hint}</p>}
-                  </div>
+                  <button
+                    key={b.id}
+                    onClick={() => setBadgeHint(badgeHint?.id === b.id ? null : b)}
+                    aria-label={b.name}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-lg border transition-all
+                      ${b.has ? 'border-kingdom-gold/40 bg-kingdom-gold/10' : 'border-white/10 opacity-30 grayscale'}
+                      ${badgeHint?.id === b.id ? 'scale-110 border-kingdom-gold' : ''}`}
+                  >
+                    {b.emoji}
+                  </button>
                 ))}
               </div>
-              <p className="text-white/30 text-[11px] mt-3 text-center">
-                Earn embers: answer trials and riddles, like voices, match, send voice notes.
+              <p className="text-white/50 text-xs mt-2 min-h-[1rem]">
+                {badgeHint
+                  ? `${badgeHint.name} · ${badgeHint.has ? 'earned' : badgeHint.hint}`
+                  : `${progress.badges.filter(b => b.has).length} of ${progress.badges.length} badges · tap one`}
               </p>
             </>
           )}
         </div>
 
-        {/* Narrator preview */}
-        <div className="card-ornate mb-6">
-          <h3 className="text-kingdom-gold/50 text-sm font-display tracking-wide mb-3">🔊 The Narrator</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { key: 'welcome', label: 'Welcome' },
-              { key: 'trials-intro', label: 'Trials' },
-              { key: 'riddle', label: 'Riddle' },
-              { key: 'match', label: 'Match' },
-            ].map(c => (
-              <button
-                key={c.key}
-                onClick={() => narrate(c.key)}
-                className="py-3 rounded-xl border border-kingdom-gold/15 bg-white/3 text-white/70 text-xs font-display hover:border-kingdom-gold/40 hover:text-kingdom-gold transition-all"
-              >
-                ▶ {c.label}
-              </button>
-            ))}
+        {/* Your voice */}
+        <div className="card-ornate">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-kingdom-gold/70 text-sm font-display tracking-wide">Your voice</h3>
+            <button onClick={() => navigate('/voice-record')} className="text-kingdom-gold/60 text-xs hover:text-kingdom-gold">
+              Re-record
+            </button>
           </div>
-        </div>
 
-        {/* Voice recordings */}
-        <div className="card-ornate mb-6">
-          <h3 className="text-kingdom-gold/50 text-sm font-display tracking-wide mb-4">
-            Your Voice Trials
-          </h3>
-
-          {recordings.length > 0 && (
-            <div className="space-y-2 mb-4">
-              {recordings.map(rec => (
-                <button
-                  key={rec.id}
-                  onClick={() => playRecording(rec)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${
-                    playingId === rec.id
-                      ? 'bg-kingdom-gold/10 border border-kingdom-gold/25'
-                      : 'bg-white/3 border border-white/5 hover:bg-white/5 hover:border-kingdom-gold/10'
-                  }`}
-                >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                    playingId === rec.id ? 'bg-gradient-gold pulse-ring' : 'bg-white/10'
-                  }`}>
-                    {playingId === rec.id ? (
-                      <svg className="w-3.5 h-3.5 text-kingdom-darker" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-                      </svg>
-                    ) : (
-                      <svg className="w-3.5 h-3.5 text-white/60" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white/70 text-sm truncate">{getQuest(rec.prompt_id).text}</p>
-                    <p className="text-white/30 text-xs">
-                      {getQuest(rec.prompt_id).label}
-                    </p>
-                  </div>
-                </button>
-              ))}
+          {myAnswers.length === 0 ? (
+            <button onClick={() => navigate('/voice-record')} className="btn-gold w-full text-sm">
+              Answer your three trials
+            </button>
+          ) : (
+            <div className="space-y-2">
+              {myAnswers.map(rec => {
+                const q = getQuest(rec.prompt_id)
+                const playing = playingId === rec.id
+                return (
+                  <button
+                    key={rec.id}
+                    onClick={() => playRecording(rec)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl text-left border transition-all
+                      ${playing ? 'bg-kingdom-gold/10 border-kingdom-gold/30' : 'bg-white/3 border-white/5 hover:border-kingdom-gold/15'}`}
+                  >
+                    <span className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs
+                      ${playing ? 'bg-gradient-gold text-kingdom-darker' : 'bg-white/10 text-white/70'}`}>
+                      {playing ? '❚❚' : '▶'}
+                    </span>
+                    <span className="text-white/75 text-sm truncate">{q.text}</span>
+                  </button>
+                )
+              })}
             </div>
           )}
-
-          <button
-            onClick={() => navigate('/voice-record')}
-            className="w-full py-3 rounded-xl border border-dashed border-kingdom-gold/15 text-kingdom-gold/40 text-sm hover:border-kingdom-gold/30 hover:text-kingdom-gold/60 transition-all"
-          >
-            + Answer new trials
-          </button>
         </div>
 
-        {/* Seal your scroll — only for nameless (anonymous) accounts */}
+        {/* Save account — only for accounts without email, folded until tapped */}
         {isAnonymous && (
-          <div className="card-ornate mb-6">
-            <h3 className="text-kingdom-gold/70 text-sm font-display tracking-wide mb-1">📜 Seal your scroll</h3>
-            <p className="text-white/40 text-xs mb-4 leading-relaxed">
-              Your place in the realm is kept only on this device. Seal it with an email so you never lose your voice or your matches.
-            </p>
-            <div className="space-y-3">
-              <input
-                type="email"
-                value={sealEmail}
-                onChange={e => setSealEmail(e.target.value)}
-                placeholder="your@email.com"
-                className="w-full bg-white/5 border border-kingdom-gold/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/25 focus:border-kingdom-gold/40 focus:outline-none"
-              />
-              <input
-                type="password"
-                value={sealPassword}
-                onChange={e => setSealPassword(e.target.value)}
-                minLength={6}
-                placeholder="A secret word (6+ characters)"
-                className="w-full bg-white/5 border border-kingdom-gold/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/25 focus:border-kingdom-gold/40 focus:outline-none"
-              />
-              {sealMsg && <p className="text-kingdom-gold/70 text-xs">{sealMsg}</p>}
-              <button
-                onClick={sealScroll}
-                disabled={sealing || !sealEmail || sealPassword.length < 6}
-                className="btn-gold w-full disabled:opacity-40"
-              >
-                {sealing ? 'Sealing...' : 'Seal'}
+          <div className="card-ornate">
+            {!showSeal ? (
+              <button onClick={() => setShowSeal(true)} className="w-full flex items-center justify-between text-left">
+                <span>
+                  <span className="block text-kingdom-gold/80 text-sm font-display">📜 Save your account</span>
+                  <span className="block text-white/50 text-xs">Add an email so you never lose your voice and matches</span>
+                </span>
+                <span className="text-kingdom-gold/60">→</span>
               </button>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-kingdom-gold/80 text-sm font-display">📜 Save your account</p>
+                <input
+                  type="email"
+                  value={sealEmail}
+                  onChange={e => setSealEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="w-full bg-white/5 border border-kingdom-gold/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/40 focus:border-kingdom-gold/40 focus:outline-none"
+                />
+                <input
+                  type="password"
+                  value={sealPassword}
+                  onChange={e => setSealPassword(e.target.value)}
+                  minLength={6}
+                  placeholder="Password (6+ characters)"
+                  className="w-full bg-white/5 border border-kingdom-gold/10 rounded-xl px-4 py-3 text-white text-sm placeholder-white/40 focus:border-kingdom-gold/40 focus:outline-none"
+                />
+                {sealMsg && <p className="text-kingdom-gold/80 text-xs">{sealMsg}</p>}
+                <button
+                  onClick={sealScroll}
+                  disabled={sealing || !sealEmail || sealPassword.length < 6}
+                  className="btn-gold w-full disabled:opacity-40"
+                >
+                  {sealing ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Narrator test buttons — only with ?test=1 in the address */}
+        {testMode && (
+          <div className="card-ornate">
+            <h3 className="text-kingdom-gold/70 text-sm font-display mb-3">🔊 Narrator (test)</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {['welcome', 'trials-intro', 'riddle', 'match'].map(k => (
+                <button key={k} onClick={() => narrate(k)}
+                        className="py-2 rounded-xl border border-kingdom-gold/15 text-white/70 text-xs hover:text-kingdom-gold">
+                  ▶ {k}
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Settings */}
-        <div className="card-ornate mb-6">
-          <h3 className="text-kingdom-gold/50 text-sm font-display tracking-wide mb-4">Settings</h3>
-          <div className="space-y-1">
-            {[
-              { label: 'Edit Your Legend', path: '/edit-profile' },
-              { label: 'Answer new trials', path: '/voice-record' },
-            ].map(item => (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className="w-full flex items-center justify-between py-3 px-1 text-white/50 hover:text-kingdom-gold/70 text-sm transition-colors border-b border-white/5 last:border-0"
-              >
-                <span>{item.label}</span>
-                <span className="text-kingdom-gold/30">→</span>
-              </button>
-            ))}
-          </div>
+        {/* Small links */}
+        <div className="flex justify-center gap-6 pt-2 text-sm">
+          <button onClick={() => navigate('/edit-profile')} className="text-white/50 hover:text-kingdom-gold/80">
+            Edit bio
+          </button>
+          <button
+            onClick={() => {
+              if (isAnonymous && !window.confirm('Your account is not saved with an email. If you leave, it is lost forever. Leave anyway?')) return
+              handleLogout()
+            }}
+            className="text-red-400/60 hover:text-red-400"
+          >
+            Leave the Kingdom
+          </button>
         </div>
-
-        {/* Logout */}
-        <button
-          onClick={() => {
-            if (isAnonymous && !window.confirm('Your scroll is not sealed. If you leave, this account is lost forever. Leave anyway?')) return
-            handleLogout()
-          }}
-          className="w-full text-center text-red-400/40 text-sm hover:text-red-400/70 transition-colors py-3"
-        >
-          Leave the Kingdom
-        </button>
       </div>
     </div>
   )
