@@ -155,11 +155,12 @@ export default function Profile() {
         {/* Narrator preview */}
         <div className="card-ornate mb-6">
           <h3 className="text-kingdom-gold/50 text-sm font-display tracking-wide mb-3">🔊 The Narrator</h3>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {[
               { key: 'welcome', label: 'Welcome' },
               { key: 'trials-intro', label: 'Trials' },
               { key: 'riddle', label: 'Riddle' },
+              { key: 'match', label: 'Match' },
             ].map(c => (
               <button
                 key={c.key}
