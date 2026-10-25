@@ -137,10 +137,14 @@ export default function Discover() {
 
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      await supabase.from('likes').insert({
+      const { error: likeError } = await supabase.from('likes').insert({
         liker_id: user.id,
         liked_id: currentProfile.id,
       })
+      if (likeError && likeError.code !== '23505') {
+        alert('Could not save your like: ' + likeError.message)
+        return
+      }
       setToast({ amount: EMBERS.like, label: 'Brave heart' })
       setTimeout(() => setToast(null), 1500)
 

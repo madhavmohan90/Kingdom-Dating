@@ -83,12 +83,16 @@ export default function Likes() {
   const handleLikeBack = async (likedUserId, likerProfile) => {
     if (!userId) return
     try {
-      await supabase.from('likes').insert({
+      const { error: likeError } = await supabase.from('likes').insert({
         liker_id: userId,
         liked_id: likedUserId,
       })
+      // 23505 = already liked: fine, still check for a match below
+      if (likeError && likeError.code !== '23505') {
+        alert('Could not like back: ' + likeError.message)
+        return
+      }
 
-      // Check if auto-match trigger created a match
       const { data: match } = await supabase
         .from('matches')
         .select('id')
@@ -102,12 +106,10 @@ export default function Likes() {
           otherUser: likerProfile,
         })
       } else {
-        alert('You liked them back!')
+        alert('Liked back, but no match was created. The match setup in the database needs fixing.')
       }
     } catch (err) {
-      if (err.code === '23505') {
-        alert('You already liked this person!')
-      }
+      alert('Something went wrong: ' + err.message)
     }
   }
 
