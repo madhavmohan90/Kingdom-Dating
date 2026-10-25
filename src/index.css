@@ -214,3 +214,16 @@
   70%  { opacity: 1; transform: translateY(-10px) scale(1); }
   100% { opacity: 0; transform: translateY(-40px) scale(0.95); }
 }
+
+/* Readability: slightly larger base size, and lift the faintest text */
+html { font-size: 17px; }
+.text-white\/10 { color: rgba(255,255,255,0.35) !important; }
+.text-white\/20 { color: rgba(255,255,255,0.45) !important; }
+.text-white\/25 { color: rgba(255,255,255,0.5) !important; }
+.text-white\/30 { color: rgba(255,255,255,0.55) !important; }
+.text-white\/35 { color: rgba(255,255,255,0.6) !important; }
+.text-white\/40 { color: rgba(255,255,255,0.65) !important; }
+.text-white\/50 { color: rgba(255,255,255,0.72) !important; }
+.text-kingdom-gold\/30 { color: rgba(212,168,67,0.6) !important; }
+.text-kingdom-gold\/40 { color: rgba(212,168,67,0.7) !important; }
+.text-kingdom-gold\/50 { color: rgba(212,168,67,0.78) !important; }

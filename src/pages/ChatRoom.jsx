@@ -30,6 +30,8 @@ export default function ChatRoom() {
   const [otherUser, setOtherUser] = useState(null)
   const [userId, setUserId] = useState(null)
   const [isRecording, setIsRecording] = useState(false)
+  const [recSeconds, setRecSeconds] = useState(0)
+  const recTimer = useRef(null)
   const [uploading, setUploading] = useState(false)
   const [playingId, setPlayingId] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -125,20 +127,21 @@ export default function ChatRoom() {
 
       mediaRecorder.current.start()
       setIsRecording(true)
-
-      // Auto-stop after 60 seconds
-      setTimeout(() => {
-        if (mediaRecorder.current?.state === 'recording') {
-          mediaRecorder.current.stop()
-          setIsRecording(false)
-        }
-      }, 60000)
+      setRecSeconds(0)
+      clearInterval(recTimer.current)
+      recTimer.current = setInterval(() => {
+        setRecSeconds(s => {
+          if (s + 1 >= 45) stopRecording()
+          return s + 1
+        })
+      }, 1000)
     } catch (err) {
       alert('Please allow microphone access to send voice notes.')
     }
   }
 
   const stopRecording = () => {
+    clearInterval(recTimer.current)
     if (mediaRecorder.current?.state === 'recording') {
       mediaRecorder.current.stop()
       setIsRecording(false)
@@ -393,7 +396,7 @@ export default function ChatRoom() {
           )}
         </div>
         <p className="text-white/20 text-xs text-center mt-2">
-          {isRecording ? 'Recording… tap again to send' : 'Tap the mic to record'}
+          {isRecording ? `🔴 ${recSeconds}s / 45s · tap again to send` : 'Tap the mic to record'}
         </p>
       </div>
     </div>

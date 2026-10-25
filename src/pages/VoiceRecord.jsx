@@ -7,7 +7,7 @@ import EmberToast from '../components/EmberToast'
 import { narrate, stopNarration } from '../lib/narrator'
 import { EMBERS, riddleFor, riddleId, todayKey } from '../data/gamification'
 
-const MAX_SECONDS = 60
+const MAX_SECONDS = 45
 
 export default function VoiceRecord() {
   const navigate = useNavigate()
@@ -195,8 +195,11 @@ export default function VoiceRecord() {
                   </svg>
                 )}
               </button>
-              <p className="text-white/40 text-sm mt-4 font-display">
-                {isRecording ? `Speaking… ${seconds}s / ${MAX_SECONDS}s · tap to stop` : 'Tap and speak your answer'}
+              <p className={`font-display text-4xl mt-5 tabular-nums ${isRecording ? 'text-kingdom-gold' : 'text-white/60'}`}>
+                {seconds}s <span className="text-white/40">/ {MAX_SECONDS}s</span>
+              </p>
+              <p className="text-white/70 text-base mt-1">
+                {isRecording ? 'Recording… tap to stop' : 'Tap the mic and speak your answer'}
               </p>
               {isRecording && (
                 <div className="flex gap-1 mt-4 items-end h-6">
@@ -209,6 +212,7 @@ export default function VoiceRecord() {
             </>
           ) : (
             <>
+              <p className="text-kingdom-gold font-display text-lg mb-3">✓ Recording complete · {seconds}s</p>
               <div className="w-full card-ornate mb-6">
                 <audio src={audioUrl} controls className="w-full" />
               </div>
